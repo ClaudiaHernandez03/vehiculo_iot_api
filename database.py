@@ -1,7 +1,9 @@
-
 import os
 from typing import Any
 import mysql.connector
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Database:
@@ -116,3 +118,57 @@ class Database:
 
     def obtener_estado(self, id_vehiculo):
         return self.ejecutar_sp("sp_obtener_estado", [id_vehiculo])["resultados"]
+
+    def obtener_info_demo(self, id_demo: int) -> dict[str, Any] | None:
+        """Obtiene la información básica de una DEMO."""
+        conn = self._connect()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT id_demo, id_vehiculo, nombre, descripcion, activo FROM demos WHERE id_demo = %s",
+                (id_demo,),
+            )
+            return cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
+
+    def obtener_vehiculo_activo(self, id_vehiculo: int) -> dict[str, Any] | None:
+        """Verifica si el vehículo existe y está activo."""
+        conn = self._connect()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT id_vehiculo, nombre, activo FROM vehiculos WHERE id_vehiculo = %s",
+                (id_vehiculo,),
+            )
+            return cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
+
+    def obtener_movimientos_demo(self, id_demo: int) -> list[dict[str, Any]]:
+        """Obtiene los movimientos configurados de la DEMO mediante el SP oficial."""
+        return self.ejecutar_sp("sp_obtener_movimientos_demo", [id_demo])["resultados"]
+
+    def actualizar_estado_paso_demo(self, id_vehiculo: int, id_comando: int) -> dict[str, Any]:
+        """Actualiza el estado del vehículo en RDS sin registrar historial individual."""
+        conn = self._connect()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute(
+                "SELECT conectado FROM estado_vehiculo WHERE id_vehiculo=%s FOR UPDATE",
+                (id_vehiculo,),
+            )
+            anterior = cursor.fetchone()
+            conectado = bool(anterior["conectado"]) if anterior and anterior.get("conectado") is not None else True
+            cursor.callproc("sp_actualizar_estado", [id_vehiculo, id_comando, int(conectado)])
+            self._collect_results(cursor)
+            conn.commit()
+            return {"transaccion": "confirmada", "id_vehiculo": id_vehiculo, "id_comando": id_comando}
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cursor.close()
+            conn.close()

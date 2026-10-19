@@ -10,24 +10,27 @@ from pydantic import BaseModel, Field
 
 from database import Database
 from websocket_manager import ConnectionManager
+from demo_manager import DemoManager
 from settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vehiculo_iot_api")
 db = Database()
 manager = ConnectionManager()
+demo_runner = DemoManager(db, manager)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
+    await demo_runner.cancel_all()
     await manager.close_all()
 
 
 app = FastAPI(
-    title="API Vehículo IoT - Práctica 2.5",
-    description="API FastAPI conectada a Amazon RDS: 21 Stored Procedures y WebSocket.",
-    version="1.2.0",
+    title="API Vehículo IoT - Examen 2.6",
+    description="API FastAPI conectada a Amazon RDS: 21 Stored Procedures, WebSocket y ejecución de DEMO.",
+    version="2.6.0",
     lifespan=lifespan,
 )
 
@@ -114,7 +117,7 @@ def ejecutar(nombre, parametros=None, escritura=False):
 
 @app.get("/health", tags=["Sistema"])
 def health():
-    return {"ok": True, "servicio": "vehiculo_iot_api", "version": "1.2.0"}
+    return {"ok": True, "servicio": "vehiculo_iot_api", "version": "2.6.0"}
 
 
 # VEHÍCULOS: crear, obtener uno, obtener todos, actualizar, eliminar
@@ -208,6 +211,54 @@ def actualizar_movimiento_demo(id_demo_movimiento: int, p: MovimientoDemo):
 @app.delete("/api/movimientos-demo/{id_demo_movimiento}", tags=["Movimientos demo"], dependencies=[Depends(check_api_key)])
 def eliminar_movimiento_demo(id_demo_movimiento: int):
     return ejecutar("sp_eliminar_movimiento_demo", [id_demo_movimiento], True)
+
+
+# EJECUCIÓN Y CONTROL DE DEMOS
+@app.post("/api/demos/{id_demo}/ejecutar", status_code=202, tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
+async def ejecutar_demo(id_demo: int):
+    """Inicia la ejecución temporizada de una DEMO si el vehículo no tiene otra en curso."""
+    try:
+        return await demo_runner.start_demo(id_demo)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Error al iniciar demo %s", id_demo)
+        raise HTTPException(status_code=500, detail="Error interno al iniciar la DEMO.") from exc
+
+
+@app.post("/api/demos/{id_demo}/cancelar", tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
+async def cancelar_demo(id_demo: int):
+    """Cancela una DEMO activa asociada al id_demo."""
+    res = await demo_runner.cancel_demo_by_id(id_demo)
+    if not res.get("ok"):
+        raise HTTPException(status_code=404, detail=res.get("mensaje"))
+    return res
+
+
+@app.delete("/api/demos/{id_demo}/ejecutar", tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
+async def cancelar_demo_delete(id_demo: int):
+    """Alias HTTP DELETE para cancelar una DEMO activa."""
+    return await cancelar_demo(id_demo)
+
+
+@app.get("/api/vehiculos/{id_vehiculo}/demo/activa", tags=["Demostraciones"])
+def obtener_demo_activa_vehiculo(id_vehiculo: int):
+    """Consulta si existe una DEMO en ejecución para el vehículo especificado."""
+    info = demo_runner.get_active_demo_info(id_vehiculo)
+    return {"id_vehiculo": id_vehiculo, "activa": info is not None, "demo": info}
+
+
+@app.post("/api/vehiculos/{id_vehiculo}/demo/cancelar", tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
+async def cancelar_demo_vehiculo(id_vehiculo: int):
+    """Cancela cualquier DEMO en ejecución para el vehículo especificado."""
+    res = await demo_runner.cancel_demo(id_vehiculo)
+    if not res.get("ok"):
+        raise HTTPException(status_code=404, detail=res.get("mensaje"))
+    return res
 
 
 # ESTADO E HISTORIAL
