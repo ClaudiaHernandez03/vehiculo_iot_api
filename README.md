@@ -1,156 +1,82 @@
-# API Vehículo IoT — Práctica 2.5 (versión inicial actualizada)
+# API Vehículo IoT
 
-Esta aplicación se ejecuta localmente en VS Code y se conecta a la base `vehiculo_iot` alojada en Amazon RDS. La arquitectura está dividida en módulos para añadir después los otros Stored Procedures y endpoints sin rehacer la aplicación.
-
-## Alcance actual
-
-- `POST /api/movimientos`: ejecuta `sp_actualizar_estado` y `sp_registrar_historial` en una sola transacción; solo notifica WebSocket después de `COMMIT`.
-- `GET /api/vehiculos/{id_vehiculo}/historial`: devuelve como máximo los diez movimientos individuales más recientes.
-- `WS /ws/vehiculos/{id_vehiculo}`: envía el estado inicial y notifica eventos del vehículo correspondiente.
-- `GET /health`: comprobación auxiliar de la API.
-
-No incluye DEMO ni los otros endpoints todavía.
-
-## Preparar en Windows / VS Code
-
-Abre esta carpeta en VS Code. En la terminal PowerShell:
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-Copy-Item .env.example .env
-```
-
-Completa `.env` con los datos reales de Amazon RDS. No publiques `.env` ni compartas la contraseña.
-
-## Ejecutar
-
-```powershell
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
-
-- Swagger: http://localhost:8000/docs
-- Salud: http://localhost:8000/health
-
-## POST de movimiento individual
-
-URL: `POST http://127.0.0.1:8000/api/movimientos`
-
-Header: `x-api-key: <API_KEY de .env>` si configuraste una API key no vacía.
-
-```json
-{
-  "id_vehiculo": 1,
-  "id_comando": 2,
-  "origen": "Thunder Client"
-}
-```
-
-El código ejecuta:
-- `sp_actualizar_estado(p_id_vehiculo, p_id_comando, p_conectado)`
-- `sp_registrar_historial(p_id_vehiculo, p_id_comando, p_origen)`
-
-El valor `p_conectado` se manda como `FALSE` provisionalmente para no declarar una conexión física que no se ha confirmado. Esto se debe revisar con las reglas y campos de la base antes de considerar el POST listo para evaluación.
-
-## GET de historial
-
-URL: `GET http://127.0.0.1:8000/api/vehiculos/1/historial`
-
-`sp_obtener_historial` devuelve los datos en orden descendente por `fecha_hora` e `id_historial`. La API devuelve máximo diez registros.
-
-## WebSocket
-
-Conecta Thunder Client a `ws://127.0.0.1:8000/ws/vehiculos/1`. Recibirás `estado_inicial`. Después, ejecuta el POST en otra pestaña para recibir el evento `movimiento_individual`. Puedes enviar `{"tipo":"ping"}` para recibir `pong`.
-
-## Firmas de SP confirmadas en RDS
-
-```sql
-sp_actualizar_estado(IN p_id_vehiculo INT, IN p_id_comando INT, IN p_conectado BOOLEAN)
-sp_registrar_historial(IN p_id_vehiculo INT, IN p_id_comando INT, IN p_origen VARCHAR(30))
-sp_obtener_historial(IN p_id_vehiculo INT)
-sp_obtener_estado(IN p_id_vehiculo INT)
-```
-
-## Pendiente antes de la prueba funcional
-
-La guía 2.5 exige validar que el vehículo exista y esté activo, que el comando exista y esté activo y que pertenezca a ese vehículo. Las definiciones recibidas hasta ahora no incluyen esas comprobaciones dentro de `sp_actualizar_estado`, por lo que falta revisar `SHOW CREATE TABLE vehiculo_iot.vehiculos` y `SHOW CREATE TABLE vehiculo_iot.comandos` para implementar la validación con los nombres reales de columnas. No ejecutes pruebas POST de datos reales hasta terminar esa validación.
-
-## Arquitectura ampliable
-
-- `main.py`: rutas HTTP y WebSocket.
-- `database.py`: acceso a datos y Stored Procedures.
-- `websocket_manager.py`: conexiones por vehículo.
-- `settings.py`: configuración.
-- `requirements.txt`: dependencias.
-
-Los servicios futuros para vehículos, comandos, estado y DEMO se agregarán como módulos separados reutilizando el acceso a datos. El despliegue público no corresponde a esta práctica.
+API REST y WebSocket desarrollada con **Python**, **FastAPI** y **Programación Orientada a Objetos (POO)**, conectada a la base de datos MySQL `vehiculo_iot` alojada en **Amazon RDS** y publicada en **Amazon EC2** mediante **HTTPS** y **WSS**.
 
 ---
 
-## Examen 2.6 — Auditoría de Stored Procedures (Versión 1)
+## Versiones del Proyecto
 
-### Fuentes de información
+> **Distinción entre la versión declarada en FastAPI y las versiones de Git:**
+> - **Versión declarada en FastAPI (`2.6.0`):** configurada en `main.py`, `/health` y `/openapi.json`; indica la versión del servicio web para la evaluación 2.6.
+> - **Versiones evolutivas en Git (`v1.0` a `v4.0`):** identifican en el historial de commits las cuatro etapas en las que se construyó y desplegó el proyecto (listas para etiquetarse en Git).
 
-Los parámetros de entrada de los Stored Procedures se obtuvieron de
-dos fuentes independientes:
+| Versión | Cambios principales | Estado |
+| :--- | :--- | :--- |
+| **v1.0 — Revisión y preparación** | Configuración inicial del proyecto en Python con POO (`settings.py`, `database.py`), variables de entorno (`.env.example`) y script de prueba (`probar_conexion.py`). Sirve para establecer y validar la conexión segura con la base de datos `vehiculo_iot` en Amazon RDS. | Completado |
+| **v2.0 — API y procedimientos almacenados** | Integración en `database.py` y `main.py` de los 21 Stored Procedures de MySQL (vehículos, comandos, estado, historial, demos y movimientos demo) y su tabla de parámetros. Sirve para administrar el catálogo completo y registrar movimientos individuales en una sola transacción. | Completado |
+| **v3.0 — Comunicación IoT y WebSocket** | Implementación del canal WebSocket por vehículo (`websocket_manager.py`) y del coordinador de demostraciones (`demo_manager.py`). Sirve para enviar el último estado al conectar, notificar movimientos individuales en tiempo real y ejecutar secuencias DEMO temporizadas sin ensuciar el historial individual, bloqueando ejecuciones simultáneas (`409 Conflict`) y permitiendo su cancelación. | Completado |
+| **v4.0 — Despliegue final en AWS** | Publicación en Amazon EC2 (Windows Server) con servicio automático (`VehiculoIoTAPI` vía NSSM), proxy inverso Caddy con HTTPS y WSS, interfaz Swagger UI en tema oscuro (`static/swagger-custom.css`), código comentado y reporte técnico en [`docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`](docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx). Sirve para operar la API públicamente de forma continua sin depender de Visual Studio Code. | Completado |
 
-- **CSV exportado de MySQL Workbench** (`mysql.csv`): contiene los
-  parámetros registrados en `information_schema.PARAMETERS` para 20 de
-  los 21 procedimientos. Los procedimientos sin parámetros de entrada
-  no aparecen en esa vista; por eso `sp_obtener_vehiculos` está ausente.
-- **Prueba funcional**: `GET /api/vehiculos` devolvió HTTP 200 con
-  registros reales (vehículos con ID 6 y 7), confirmando que el
-  procedimiento existe y responde. Su lista de parámetros internos
-  no fue verificada directamente.
+---
 
-La tabla siguiente compara los parámetros del CSV con los argumentos
-que el código pasa al invocar cada procedimiento. Esta comparación
-no garantiza la compatibilidad en ejecución: el comportamiento interno
-de los procedimientos que no han sido probados individualmente contra
-RDS todavía no está validado.
+## Arquitectura del Proyecto (POO)
 
-### Parámetros de los 21 Stored Procedures
+- `main.py`: rutas HTTP, validaciones Pydantic, configuración de Swagger UI y canal WebSocket.
+- `database.py`: clase `Database` encargada de la conexión a Amazon RDS, transacciones (`COMMIT` / `ROLLBACK`) e invocación de los 21 Stored Procedures.
+- `websocket_manager.py`: clase `ConnectionManager` que administra las conexiones WebSocket separadas por `id_vehiculo`.
+- `demo_manager.py`: clase `DemoManager` que coordina la ejecución asíncrona temporizada de secuencias DEMO, el control de concurrencia y la cancelación.
+- `settings.py`: clase `Settings` que carga las variables de configuración desde `.env`.
+- `static/swagger-custom.css`: hoja de estilos en tema oscuro para la documentación interactiva en `/docs`.
+- `docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`: documentación y evidencias del despliegue en Amazon EC2.
 
-| Stored Procedure | Parámetros de entrada (fuente: CSV de RDS) | Verificación |
+---
+
+## Inventario y Parámetros de los 21 Stored Procedures (`vehiculo_iot`)
+
+Los parámetros de entrada de los 21 procedimientos almacenados fueron verificados con el esquema de `information_schema.PARAMETERS` en Amazon RDS y pruebas funcionales desde la API:
+
+| Stored Procedure | Parámetros de entrada | Endpoint asociado |
 |---|---|---|
-| `sp_obtener_vehiculos` | *(sin parámetros en CSV)* | Funcional: HTTP 200 |
-| `sp_obtener_vehiculo` | `IN p_id_vehiculo INT` | CSV |
-| `sp_crear_vehiculo` | `IN p_nombre VARCHAR, IN p_modelo VARCHAR, IN p_descripcion VARCHAR, IN p_microcontrolador VARCHAR` | CSV |
-| `sp_actualizar_vehiculo` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_modelo VARCHAR, IN p_descripcion VARCHAR, IN p_microcontrolador VARCHAR, IN p_activo TINYINT` | CSV |
-| `sp_eliminar_vehiculo` | `IN p_id_vehiculo INT` | CSV |
-| `sp_crear_comando` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_codigo INT, IN p_descripcion VARCHAR` | CSV |
-| `sp_obtener_comandos_vehiculo` | `IN p_id_vehiculo INT` | CSV |
-| `sp_actualizar_comando` | `IN p_id_comando INT, IN p_nombre VARCHAR, IN p_codigo INT, IN p_descripcion VARCHAR, IN p_activo TINYINT` | CSV |
-| `sp_eliminar_comando` | `IN p_id_comando INT` | CSV |
-| `sp_crear_demo` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_descripcion VARCHAR` | CSV |
-| `sp_obtener_demos` | `IN p_id_vehiculo INT` | CSV |
-| `sp_actualizar_demo` | `IN p_id_demo INT, IN p_nombre VARCHAR, IN p_descripcion VARCHAR, IN p_activo TINYINT` | CSV |
-| `sp_eliminar_demo` | `IN p_id_demo INT` | CSV |
-| `sp_agregar_movimiento_demo` | `IN p_id_demo INT, IN p_id_comando INT, IN p_orden INT, IN p_duracion_ms INT, IN p_pausa_ms INT` | CSV |
-| `sp_obtener_movimientos_demo` | `IN p_id_demo INT` | CSV |
-| `sp_actualizar_movimiento_demo` | `IN p_id_demo_movimiento INT, IN p_id_comando INT, IN p_orden INT, IN p_duracion_ms INT, IN p_pausa_ms INT` | CSV |
-| `sp_eliminar_movimiento_demo` | `IN p_id_demo_movimiento INT` | CSV |
-| `sp_actualizar_estado` | `IN p_id_vehiculo INT, IN p_id_comando INT, IN p_conectado TINYINT` | CSV |
-| `sp_obtener_estado` | `IN p_id_vehiculo INT` | CSV |
-| `sp_obtener_historial` | `IN p_id_vehiculo INT` | CSV |
-| `sp_registrar_historial` | `IN p_id_vehiculo INT, IN p_id_comando INT, IN p_origen VARCHAR` | CSV |
-
-### Nota sobre `sp_actualizar_estado` en movimientos individuales
-
-En `database.py`, `registrar_movimiento()` llama a `sp_actualizar_estado`
-pasando como `p_conectado` el valor previo almacenado en la base de datos,
-no un valor nuevo proporcionado por el cliente. Este comportamiento se
-conserva intencionalmente hasta que los requisitos exactos del examen
-lo precisen.
+| `sp_obtener_vehiculos` | *(sin parámetros de entrada)* | `GET /api/vehiculos` |
+| `sp_obtener_vehiculo` | `IN p_id_vehiculo INT` | `GET /api/vehiculos/{id_vehiculo}` |
+| `sp_crear_vehiculo` | `IN p_nombre VARCHAR, IN p_modelo VARCHAR, IN p_descripcion VARCHAR, IN p_microcontrolador VARCHAR` | `POST /api/vehiculos` |
+| `sp_actualizar_vehiculo` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_modelo VARCHAR, IN p_descripcion VARCHAR, IN p_microcontrolador VARCHAR, IN p_activo TINYINT` | `PUT /api/vehiculos/{id_vehiculo}` |
+| `sp_eliminar_vehiculo` | `IN p_id_vehiculo INT` | `DELETE /api/vehiculos/{id_vehiculo}` |
+| `sp_crear_comando` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_codigo INT, IN p_descripcion VARCHAR` | `POST /api/comandos` |
+| `sp_obtener_comandos_vehiculo` | `IN p_id_vehiculo INT` | `GET /api/vehiculos/{id_vehiculo}/comandos` |
+| `sp_actualizar_comando` | `IN p_id_comando INT, IN p_nombre VARCHAR, IN p_codigo INT, IN p_descripcion VARCHAR, IN p_activo TINYINT` | `PUT /api/comandos/{id_comando}` |
+| `sp_eliminar_comando` | `IN p_id_comando INT` | `DELETE /api/comandos/{id_comando}` |
+| `sp_crear_demo` | `IN p_id_vehiculo INT, IN p_nombre VARCHAR, IN p_descripcion VARCHAR` | `POST /api/demos` |
+| `sp_obtener_demos` | `IN p_id_vehiculo INT` | `GET /api/vehiculos/{id_vehiculo}/demos` |
+| `sp_actualizar_demo` | `IN p_id_demo INT, IN p_nombre VARCHAR, IN p_descripcion VARCHAR, IN p_activo TINYINT` | `PUT /api/demos/{id_demo}` |
+| `sp_eliminar_demo` | `IN p_id_demo INT` | `DELETE /api/demos/{id_demo}` |
+| `sp_agregar_movimiento_demo` | `IN p_id_demo INT, IN p_id_comando INT, IN p_orden INT, IN p_duracion_ms INT, IN p_pausa_ms INT` | `POST /api/demos/{id_demo}/movimientos` |
+| `sp_obtener_movimientos_demo` | `IN p_id_demo INT` | `GET /api/demos/{id_demo}/movimientos` |
+| `sp_actualizar_movimiento_demo` | `IN p_id_demo_movimiento INT, IN p_id_comando INT, IN p_orden INT, IN p_duracion_ms INT, IN p_pausa_ms INT` | `PUT /api/movimientos-demo/{id_demo_movimiento}` |
+| `sp_eliminar_movimiento_demo` | `IN p_id_demo_movimiento INT` | `DELETE /api/movimientos-demo/{id_demo_movimiento}` |
+| `sp_actualizar_estado` | `IN p_id_vehiculo INT, IN p_id_comando INT, IN p_conectado TINYINT` | `PUT /api/vehiculos/{id_vehiculo}/estado` |
+| `sp_obtener_estado` | `IN p_id_vehiculo INT` | `GET /api/vehiculos/{id_vehiculo}/estado` |
+| `sp_obtener_historial` | `IN p_id_vehiculo INT` | `GET /api/vehiculos/{id_vehiculo}/historial` |
+| `sp_registrar_historial` | `IN p_id_vehiculo INT, IN p_id_comando INT, IN p_origen VARCHAR` | `POST /api/historial` |
 
 ---
 
-## Examen 2.6 — Arquitectura y Tecnologías de IoT
+## Operaciones Principales y Reglas de Negocio
 
-Esta sección complementa la práctica 2.5 integrando la ejecución temporizada de demostraciones (DEMO), control de concurrencia, cancelación, eventos WebSocket en tiempo real y la preparación para el despliegue persistente en Amazon EC2 con HTTPS y WSS.
+### 1. Movimientos individuales e historial reciente
+- **POST de movimiento individual (`POST /api/movimientos`):**
+  Valida que el vehículo y el comando existan, estén activos y correspondan entre sí. Ejecuta `sp_actualizar_estado` y `sp_registrar_historial` en **una sola transacción** y notifica por WebSocket únicamente después del `COMMIT`.
+  ```json
+  {
+    "id_vehiculo": 6,
+    "id_comando": 38,
+    "origen": "Thunder Client"
+  }
+  ```
+- **GET de historial (`GET /api/vehiculos/{id_vehiculo}/historial`):**
+  Ejecuta `sp_obtener_historial` y devuelve como máximo los **10 movimientos individuales más recientes**, ordenados del más reciente al más antiguo.
 
-### 1. Endpoints de Demostración (DEMO)
+### 2. Endpoints de Demostración (DEMO)
 
 | Método | Ruta | Código HTTP | Descripción |
 |---|---|:---:|---|
@@ -160,7 +86,7 @@ Esta sección complementa la práctica 2.5 integrando la ejecución temporizada 
 | `GET` | `/api/vehiculos/{id_vehiculo}/demo/activa` | `200 OK` | Consulta si existe una DEMO en ejecución para el vehículo y sus datos. |
 | `POST` | `/api/vehiculos/{id_vehiculo}/demo/cancelar` | `200 OK` | Cancela la DEMO activa buscando directamente por el ID del vehículo. |
 
-### 2. Eventos WebSocket (`/ws/vehiculos/{id_vehiculo}`)
+### 3. Eventos WebSocket (`/ws/vehiculos/{id_vehiculo}`)
 
 Todos los clientes WebSocket conectados a un mismo vehículo reciben en tiempo real los eventos correspondientes en formato JSON:
 
@@ -176,19 +102,30 @@ Todos los clientes WebSocket conectados a un mismo vehículo reciben en tiempo r
   Notifica la culminación exitosa de todos los pasos de la DEMO.
 - **`demo_cancelada` (`POST /api/demos/{id}/cancelar`):**
   Notifica la interrupción anticipada de la DEMO indicando el paso en el que se detuvo.
+- **`ping` / `pong`:**
+  Si el cliente envía `{"tipo": "ping"}`, el servidor responde `{"tipo": "pong"}` para comprobar que el canal sigue activo.
 
-### 3. Instrucciones de Ejecución y Pruebas Locales
+---
 
-1. **Iniciar el servidor localmente:**
+## Instrucciones de Ejecución y Pruebas Locales
+
+1. **Preparar el entorno en Windows / VS Code:**
    ```powershell
+   py -m venv .venv
    .\.venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   Copy-Item .env.example .env
+   ```
+   *(Completa `.env` con las credenciales reales de Amazon RDS. No publiques `.env` ni compartas contraseñas).*
+
+2. **Iniciar el servidor localmente:**
+   ```powershell
    uvicorn main:app --reload --host 127.0.0.1 --port 8000
    ```
-2. **Pruebas interactivas en Swagger UI:**
-   - Abrir en el navegador: `http://127.0.0.1:8000/docs`
-   - Si configuraste `API_KEY` en `.env`, usa el botón **Authorize** o incluye el header `x-api-key`.
-3. **Pruebas automatizadas del proyecto:**
-   Se incluyen dos suites para verificar la lógica y los endpoints sin pasos manuales:
+   - Swagger UI: `http://127.0.0.1:8000/docs`
+   - Salud del servicio: `http://127.0.0.1:8000/health`
+
+3. **Ejecutar pruebas automatizadas del proyecto:**
    ```powershell
    # Suite de integración (Base de datos RDS, DemoManager, WebSocket y transacciones)
    python test_examen26.py
@@ -197,7 +134,9 @@ Todos los clientes WebSocket conectados a un mismo vehículo reciben en tiempo r
    python test_http_endpoints.py
    ```
 
-### 4. Despliegue en Amazon EC2 (Windows Server, Caddy, HTTPS y WSS)
+---
+
+## Despliegue en Amazon EC2 (Windows Server, Caddy, HTTPS y WSS)
 
 La API se encuentra desplegada en una instancia de **Amazon EC2 con Windows Server** (`WebServer`), configurada con ejecución persistente en segundo plano y proxy inverso con certificado TLS automático:
 
@@ -217,25 +156,17 @@ La API se encuentra desplegada en una instancia de **Amazon EC2 con Windows Serv
 - **Archivos adicionales para entornos Linux:**
   También se incluyen en el repositorio `vehiculo_iot_api.service` (systemd), `nginx.conf` y `deploy_ec2.sh` como referencia para despliegues sobre distribuciones Linux.
 
-### 5. Lista de Evidencias Requeridas para el Examen
+---
 
-Para documentar la entrega en el reporte en PDF, captura las siguientes pantallas:
+## Lista de Evidencias para Evaluación
 
 1. **Evidencia 1 — Swagger UI:**
-   - Captura de `http://127.0.0.1:8000/docs` (o URL pública HTTPS) mostrando los tags `Demostraciones`, `Movimientos`, `Vehículos`, `Comandos`, `Estado` e `Historial`.
+   Captura de `/docs` mostrando los grupos `Vehículos`, `Comandos`, `Demostraciones`, `Movimientos demo`, `Estado`, `Historial` y `Movimientos`.
 2. **Evidencia 2 — POST individual con dos clientes WebSocket simultáneos:**
-   - Dos pestañas de Thunder Client conectadas a `ws://127.0.0.1:8000/ws/vehiculos/6` (ambas mostrando `estado_inicial`).
-   - Una tercera pestaña enviando `POST /api/movimientos` con cuerpo:
-     `{"id_vehiculo": 6, "id_comando": 38, "origen": "Thunder Client"}`.
-   - Ambas pestañas WebSocket mostrando la llegada simultánea del evento `movimiento_individual`.
+   Dos pestañas de Thunder Client conectadas al WebSocket del vehículo (ambas mostrando `estado_inicial`) y una tercera pestaña enviando `POST /api/movimientos`, recibiendo simultáneamente el evento `movimiento_individual`.
 3. **Evidencia 3 — GET Historial (últimos 10 registros):**
-   - Petición `GET /api/vehiculos/6/historial` en Thunder Client mostrando los registros ordenados descendente por fecha.
+   Petición `GET /api/vehiculos/6/historial` mostrando como máximo los 10 movimientos individuales más recientes en orden descendente.
 4. **Evidencia 4 — DEMO temporizada y control de concurrencia:**
-   - Petición `POST /api/demos/5/ejecutar` recibiendo código `202 Accepted`.
-   - Clientes WebSocket recibiendo `demo_inicio` y los eventos `demo_paso` en orden.
-   - Envío inmediato de una segunda petición `POST /api/demos/5/ejecutar` mostrando la respuesta `409 Conflict`.
+   Petición `POST /api/demos/5/ejecutar` con respuesta `202 Accepted`, recepción de `demo_inicio` y `demo_paso` en orden por WebSocket, y rechazo `409 Conflict` ante una segunda ejecución simultánea.
 5. **Evidencia 5 — Cancelación de DEMO y verificación de historial:**
-   - Petición `POST /api/demos/5/cancelar` recibiendo código `200 OK` y evento `demo_cancelada` en WebSocket.
-   - Petición `GET /api/vehiculos/6/historial` comprobando que los pasos de la DEMO **no** agregaron registros al historial individual.
-6. **Evidencia 6 — Servicio persistente (systemd):**
-   - Ejecución de `test_examen26.py` con resultado `8/8 PASS` o estado de `systemctl status vehiculo_iot_api`.
+   Petición `POST /api/demos/5/cancelar` recibiendo `200 OK` y evento `demo_cancelada`, comprobando con `GET /api/vehiculos/6/historial` que los pasos de la DEMO no se agregaron al historial individual.
