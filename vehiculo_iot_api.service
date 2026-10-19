@@ -1,0 +1,18 @@
+[Unit]
+Description=API Vehiculo IoT - Examen 2.6 (FastAPI + WebSocket)
+After=network.target network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/vehiculo_iot_api/vehiculo_iot_api
+EnvironmentFile=/home/ec2-user/vehiculo_iot_api/vehiculo_iot_api/.env
+ExecStart=/home/ec2-user/vehiculo_iot_api/vehiculo_iot_api/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips='*'
+Restart=always
+RestartSec=5
+KillMode=process
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
