@@ -33,6 +33,32 @@ def test_http():
             assert data.get("ok") is True
             print("[PASS] GET /health -> 200 OK:", data)
 
+        # 1b. Swagger UI /docs
+        req_docs = urllib.request.Request(f"{BASE_URL}/docs")
+        with urllib.request.urlopen(req_docs) as resp:
+            html = resp.read().decode()
+            assert resp.status == 200
+            assert "swagger-ui" in html
+            assert "/static/swagger-custom.css" in html
+            print("[PASS] GET /docs -> 200 OK (Swagger UI nativo cargado correctamente)")
+
+        # 1c. OpenAPI Schema /openapi.json
+        req_oas = urllib.request.Request(f"{BASE_URL}/openapi.json")
+        with urllib.request.urlopen(req_oas) as resp:
+            oas_data = json.loads(resp.read().decode())
+            assert "paths" in oas_data
+            assert len(oas_data["paths"]) == 19
+            print("[PASS] GET /openapi.json -> 200 OK (19 rutas registradas)")
+
+        # 1d. Static CSS /static/swagger-custom.css
+        req_css = urllib.request.Request(f"{BASE_URL}/static/swagger-custom.css")
+        with urllib.request.urlopen(req_css) as resp:
+            css_data = resp.read().decode()
+            assert resp.status == 200
+            assert "@import" in css_data
+            assert "#0B1220" in css_data
+            print("[PASS] GET /static/swagger-custom.css -> 200 OK (CSS cargado correctamente)")
+
         # 2. GET vehiculos
         req = urllib.request.Request(f"{BASE_URL}/api/vehiculos")
         with urllib.request.urlopen(req) as resp:

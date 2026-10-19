@@ -4,3 +4,8 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .vscode/
+deploy_windows/
+*.zip
+*.log
+*.pem
+*.key

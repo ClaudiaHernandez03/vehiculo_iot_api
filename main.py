@@ -1,3 +1,11 @@
+# ==============================================================================
+# MÓDULO PRINCIPAL: main.py
+# PROPÓSITO: Definir la aplicación FastAPI, modelos de validación Pydantic,
+#            los endpoints HTTP (GET, POST, PUT, DELETE) que consumen los
+#            21 Stored Procedures de Amazon RDS, la ejecución de DEMO y el
+#            canal WebSocket en tiempo real por vehículo.
+# ==============================================================================
+
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import asyncio
@@ -5,6 +13,8 @@ import json
 import logging
 
 from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.staticfiles import StaticFiles
 from mysql.connector import Error as MySQLError
 from pydantic import BaseModel, Field
 
@@ -13,29 +23,51 @@ from websocket_manager import ConnectionManager
 from demo_manager import DemoManager
 from settings import settings
 
+# Configuración de bitácora (logs) e instanciación de las clases POO principales
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vehiculo_iot_api")
-db = Database()
-manager = ConnectionManager()
-demo_runner = DemoManager(db, manager)
+db = Database()                         # Acceso a Amazon RDS y los 21 Stored Procedures
+manager = ConnectionManager()           # Administración de conexiones WebSocket por vehículo
+demo_runner = DemoManager(db, manager)  # Coordinador de secuencias DEMO temporizadas
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Ciclo de vida de FastAPI: al apagar el servidor, cancela las DEMO activas
+    y cierra limpiamente todas las conexiones WebSocket."""
     yield
     await demo_runner.cancel_all()
     await manager.close_all()
 
 
+# Inicialización de la aplicación FastAPI (docs_url=None para usar nuestra ruta /docs personalizada)
 app = FastAPI(
-    title="API Vehículo IoT - Examen 2.6",
+    title="API Vehículo IoT",
     description="API FastAPI conectada a Amazon RDS: 21 Stored Procedures, WebSocket y ejecución de DEMO.",
     version="2.6.0",
     lifespan=lifespan,
+    docs_url=None,
 )
 
+# Servir archivos estáticos (hoja de estilos oscura para Swagger UI)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Modelos de entrada
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    """Sirve la interfaz Swagger UI nativa estilizada con CSS corporativo."""
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title="API Vehículo IoT",
+        swagger_css_url="/static/swagger-custom.css",
+        swagger_favicon_url="https://fastapi.tiangolo.com/img/favicon.png",
+        swagger_ui_parameters={"docExpansion": "list", "defaultModelsExpandDepth": 1},
+    )
+
+
+# ==============================================================================
+# MODELOS DE ENTRADA (Pydantic): Validan tipos y longitudes antes de ir a RDS
+# ==============================================================================
 class VehiculoCrear(BaseModel):
     nombre: str = Field(min_length=1, max_length=80)
     modelo: str | None = Field(default=None, max_length=80)
@@ -97,12 +129,17 @@ class HistorialCrear(BaseModel):
     origen: str = Field(default="API", min_length=1, max_length=30)
 
 
+# ==============================================================================
+# FUNCIONES AUXILIARES DE SEGURIDAD Y EJECUCIÓN DE STORED PROCEDURES
+# ==============================================================================
 def check_api_key(x_api_key: str | None = Header(default=None)):
+    """Verifica el encabezado x-api-key en las operaciones de escritura si API_KEY está activa."""
     if settings.api_key and x_api_key != settings.api_key:
         raise HTTPException(status_code=401, detail="API key inválida o ausente")
 
 
 def ejecutar(nombre, parametros=None, escritura=False):
+    """Envoltorio que llama a db.ejecutar_sp y traduce errores de MySQL a códigos HTTP claros."""
     try:
         return db.ejecutar_sp(nombre, parametros or [], escritura=escritura)
     except ValueError as exc:
@@ -117,10 +154,13 @@ def ejecutar(nombre, parametros=None, escritura=False):
 
 @app.get("/health", tags=["Sistema"])
 def health():
+    """Endpoint de verificación rápida para comprobar que el servidor está en línea."""
     return {"ok": True, "servicio": "vehiculo_iot_api", "version": "2.6.0"}
 
 
-# VEHÍCULOS: crear, obtener uno, obtener todos, actualizar, eliminar
+# ==============================================================================
+# 1. VEHÍCULOS (5 Stored Procedures: crear, obtener todos, obtener uno, actualizar, eliminar)
+# ==============================================================================
 @app.post("/api/vehiculos", status_code=201, tags=["Vehículos"], dependencies=[Depends(check_api_key)])
 def crear_vehiculo(p: VehiculoCrear):
     return ejecutar("sp_crear_vehiculo", [p.nombre, p.modelo, p.descripcion, p.microcontrolador], True)
@@ -147,7 +187,9 @@ def eliminar_vehiculo(id_vehiculo: int):
     return ejecutar("sp_eliminar_vehiculo", [id_vehiculo], True)
 
 
-# COMANDOS: crear, listar por vehículo, actualizar, eliminar
+# ==============================================================================
+# 2. COMANDOS (4 Stored Procedures: crear, listar por vehículo, actualizar, eliminar)
+# ==============================================================================
 @app.post("/api/comandos", status_code=201, tags=["Comandos"], dependencies=[Depends(check_api_key)])
 def crear_comando(p: ComandoCrear):
     return ejecutar("sp_crear_comando", [p.id_vehiculo, p.nombre, p.codigo, p.descripcion], True)
@@ -169,7 +211,9 @@ def eliminar_comando(id_comando: int):
     return ejecutar("sp_eliminar_comando", [id_comando], True)
 
 
-# DEMOS: crear, listar por vehículo, actualizar, eliminar
+# ==============================================================================
+# 3. DEMOSTRACIONES (4 Stored Procedures: crear, listar por vehículo, actualizar, eliminar)
+# ==============================================================================
 @app.post("/api/demos", status_code=201, tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
 def crear_demo(p: DemoCrear):
     return ejecutar("sp_crear_demo", [p.id_vehiculo, p.nombre, p.descripcion], True)
@@ -190,7 +234,9 @@ def eliminar_demo(id_demo: int):
     return ejecutar("sp_eliminar_demo", [id_demo], True)
 
 
-# MOVIMIENTOS DEMO: agregar, listar, actualizar, eliminar
+# ==============================================================================
+# 4. MOVIMIENTOS DEMO (4 Stored Procedures: agregar, listar, actualizar, eliminar)
+# ==============================================================================
 @app.post("/api/demos/{id_demo}/movimientos", status_code=201, tags=["Movimientos demo"], dependencies=[Depends(check_api_key)])
 def agregar_movimiento_demo(id_demo: int, p: MovimientoDemo):
     return ejecutar("sp_agregar_movimiento_demo",
@@ -213,7 +259,9 @@ def eliminar_movimiento_demo(id_demo_movimiento: int):
     return ejecutar("sp_eliminar_movimiento_demo", [id_demo_movimiento], True)
 
 
-# EJECUCIÓN Y CONTROL DE DEMOS
+# ==============================================================================
+# 5. EJECUCIÓN TEMPORIZADA Y CONTROL DE CONCURRENCIA DE DEMOS
+# ==============================================================================
 @app.post("/api/demos/{id_demo}/ejecutar", status_code=202, tags=["Demostraciones"], dependencies=[Depends(check_api_key)])
 async def ejecutar_demo(id_demo: int):
     """Inicia la ejecución temporizada de una DEMO si el vehículo no tiene otra en curso."""
@@ -224,6 +272,7 @@ async def ejecutar_demo(id_demo: int):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
+        # Retorna 409 Conflict si ya se está ejecutando una DEMO en ese mismo vehículo
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("Error al iniciar demo %s", id_demo)
@@ -261,7 +310,9 @@ async def cancelar_demo_vehiculo(id_vehiculo: int):
     return res
 
 
-# ESTADO E HISTORIAL
+# ==============================================================================
+# 6. ESTADO E HISTORIAL (4 Stored Procedures + POST transaccional de movimiento)
+# ==============================================================================
 @app.put("/api/vehiculos/{id_vehiculo}/estado", tags=["Estado"], dependencies=[Depends(check_api_key)])
 def actualizar_estado(id_vehiculo: int, p: EstadoActualizar):
     return ejecutar("sp_actualizar_estado", [id_vehiculo, p.id_comando, int(p.conectado)], True)
@@ -274,6 +325,7 @@ def obtener_estado(id_vehiculo: int):
 
 @app.get("/api/vehiculos/{id_vehiculo}/historial", tags=["Historial"])
 def obtener_historial(id_vehiculo: int):
+    """Devuelve como máximo los 10 movimientos individuales más recientes del vehículo."""
     resultado = ejecutar("sp_obtener_historial", [id_vehiculo])
     resultado["resultados"] = resultado["resultados"][:10]
     return resultado
@@ -287,6 +339,8 @@ def registrar_historial(p: HistorialCrear):
 
 @app.post("/api/movimientos", status_code=201, tags=["Movimientos"], dependencies=[Depends(check_api_key)])
 async def agregar_movimiento(p: MovimientoRequest):
+    """Registra un movimiento individual: actualiza estado e historial en una sola transacción
+    en Amazon RDS y después notifica por WebSocket a todos los clientes del vehículo."""
     try:
         base_datos = db.registrar_movimiento(p.id_vehiculo, p.id_comando, p.origen)
     except LookupError as exc:
@@ -305,14 +359,22 @@ async def agregar_movimiento(p: MovimientoRequest):
             "movimiento": event, "base_datos": base_datos}
 
 
+# ==============================================================================
+# 7. CANAL WEBSOCKET EN TIEMPO REAL (/ws/vehiculos/{id_vehiculo})
+# ==============================================================================
 @app.websocket("/ws/vehiculos/{id_vehiculo}")
 async def websocket_vehiculo(websocket: WebSocket, id_vehiculo: int):
+    """Canal WebSocket por vehículo:
+    1. Al conectarse un cliente, consulta y envía inmediatamente 'estado_inicial' desde RDS.
+    2. Mantiene la conexión abierta para recibir eventos ('movimiento_individual', 'demo_inicio',
+       'demo_paso', 'demo_fin', 'demo_cancelada') y responder mensajes 'ping' con 'pong'."""
     if id_vehiculo <= 0:
         await websocket.close(code=1008, reason="id_vehiculo inválido")
         return
     await manager.connect(id_vehiculo, websocket)
     try:
         try:
+            # Enviar inmediatamente el último estado guardado en RDS al conectar
             estado = await asyncio.to_thread(db.obtener_estado, id_vehiculo)
             await websocket.send_json({"tipo": "estado_inicial", "id_vehiculo": id_vehiculo,
                                        "estado": estado, "timestamp": datetime.now(timezone.utc).isoformat()})
@@ -320,6 +382,7 @@ async def websocket_vehiculo(websocket: WebSocket, id_vehiculo: int):
             logger.exception("No se pudo obtener el estado inicial del vehículo %s", id_vehiculo)
             await websocket.send_json({"tipo": "error", "id_vehiculo": id_vehiculo,
                                        "mensaje": "No fue posible consultar el estado inicial"})
+        # Escuchar mensajes entrantes del cliente (por ejemplo {"tipo": "ping"})
         while True:
             mensaje = await websocket.receive_text()
             try:

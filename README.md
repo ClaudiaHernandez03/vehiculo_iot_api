@@ -143,3 +143,99 @@ pasando como `p_conectado` el valor previo almacenado en la base de datos,
 no un valor nuevo proporcionado por el cliente. Este comportamiento se
 conserva intencionalmente hasta que los requisitos exactos del examen
 lo precisen.
+
+---
+
+## Examen 2.6 — Arquitectura y Tecnologías de IoT
+
+Esta sección complementa la práctica 2.5 integrando la ejecución temporizada de demostraciones (DEMO), control de concurrencia, cancelación, eventos WebSocket en tiempo real y la preparación para el despliegue persistente en Amazon EC2 con HTTPS y WSS.
+
+### 1. Endpoints de Demostración (DEMO)
+
+| Método | Ruta | Código HTTP | Descripción |
+|---|---|:---:|---|
+| `POST` | `/api/demos/{id_demo}/ejecutar` | `202 Accepted` | Inicia en segundo plano la secuencia de pasos temporizados de la DEMO. Si el vehículo ya tiene una DEMO en curso, retorna `409 Conflict`. |
+| `POST` | `/api/demos/{id_demo}/cancelar` | `200 OK` | Solicita la cancelación inmediata de la DEMO activa asociada al `id_demo`. |
+| `DELETE` | `/api/demos/{id_demo}/ejecutar` | `200 OK` | Alias HTTP DELETE para cancelar la DEMO activa. |
+| `GET` | `/api/vehiculos/{id_vehiculo}/demo/activa` | `200 OK` | Consulta si existe una DEMO en ejecución para el vehículo y sus datos. |
+| `POST` | `/api/vehiculos/{id_vehiculo}/demo/cancelar` | `200 OK` | Cancela la DEMO activa buscando directamente por el ID del vehículo. |
+
+### 2. Eventos WebSocket (`/ws/vehiculos/{id_vehiculo}`)
+
+Todos los clientes WebSocket conectados a un mismo vehículo reciben en tiempo real los eventos correspondientes en formato JSON:
+
+- **`estado_inicial` (al conectar el cliente):**
+  Envía el último estado del vehículo registrado en Amazon RDS (`sp_obtener_estado`).
+- **`movimiento_individual` (`POST /api/movimientos`):**
+  Notifica a todos los clientes conectados tras confirmarse la transacción en RDS (`sp_actualizar_estado` + `sp_registrar_historial`).
+- **`demo_inicio` (`POST /api/demos/{id}/ejecutar`):**
+  Indica el arranque de la demostración, el nombre y el número total de pasos a ejecutar.
+- **`demo_paso`:**
+  Emitido en cada paso de la DEMO respetando el orden (`orden`), duración (`duracion_ms`) y pausa (`pausa_ms`). Actualiza el estado en RDS pero **no** se registra en el historial individual.
+- **`demo_fin`:**
+  Notifica la culminación exitosa de todos los pasos de la DEMO.
+- **`demo_cancelada` (`POST /api/demos/{id}/cancelar`):**
+  Notifica la interrupción anticipada de la DEMO indicando el paso en el que se detuvo.
+
+### 3. Instrucciones de Ejecución y Pruebas Locales
+
+1. **Iniciar el servidor localmente:**
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   uvicorn main:app --reload --host 127.0.0.1 --port 8000
+   ```
+2. **Pruebas interactivas en Swagger UI:**
+   - Abrir en el navegador: `http://127.0.0.1:8000/docs`
+   - Si configuraste `API_KEY` en `.env`, usa el botón **Authorize** o incluye el header `x-api-key`.
+3. **Pruebas automatizadas del proyecto:**
+   Se incluyen dos suites para verificar la lógica y los endpoints sin pasos manuales:
+   ```powershell
+   # Suite de integración (Base de datos RDS, DemoManager, WebSocket y transacciones)
+   python test_examen26.py
+
+   # Suite de integración HTTP (servidor Uvicorn, concurrencia 409 y cancelación)
+   python test_http_endpoints.py
+   ```
+
+### 4. Despliegue en Amazon EC2 (Windows Server, Caddy, HTTPS y WSS)
+
+La API se encuentra desplegada en una instancia de **Amazon EC2 con Windows Server** (`WebServer`), configurada con ejecución persistente en segundo plano y proxy inverso con certificado TLS automático:
+
+- **Directorio en el servidor:** `C:\Users\Administrator\Documents\vehiculo_iot_api`
+- **Servicio persistente de Windows (`VehiculoIoTAPI`):**
+  Registrado mediante **NSSM** para ejecutar Uvicorn sobre el entorno virtual del proyecto escuchando únicamente en la interfaz local (`127.0.0.1:8000`), con reinicio automático ante fallos y arranque automático junto con el sistema operativo (`StartMode = Auto`, estado `Running`).
+- **Proxy inverso HTTPS y WSS (`Caddy`):**
+  Configurado como servicio de Windows (`StartMode = Auto`, estado `Running`) para atender el dominio `vehiculo-iot-api.duckdns.org` en los puertos públicos `80` (HTTP) y `443` (HTTPS/WSS) y redirigir el tráfico hacia `127.0.0.1:8000`.
+- **Seguridad de red (AWS Security Group):**
+  Se cerró la exposición pública directa del puerto `8000`, manteniendo abiertos únicamente los puertos web necesarios (`80` y `443`) hacia el proxy inverso.
+- **Direcciones públicas de verificación:**
+  - Documentación Swagger UI: `https://vehiculo-iot-api.duckdns.org/docs`
+  - Estado del servicio: `https://vehiculo-iot-api.duckdns.org/health`
+  - WebSocket seguro (Excavadora IoT): `wss://vehiculo-iot-api.duckdns.org/ws/vehiculos/6`
+- **Reporte detallado y evidencias del despliegue:**
+  Disponible en [`docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`](docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx).
+- **Archivos adicionales para entornos Linux:**
+  También se incluyen en el repositorio `vehiculo_iot_api.service` (systemd), `nginx.conf` y `deploy_ec2.sh` como referencia para despliegues sobre distribuciones Linux.
+
+### 5. Lista de Evidencias Requeridas para el Examen
+
+Para documentar la entrega en el reporte en PDF, captura las siguientes pantallas:
+
+1. **Evidencia 1 — Swagger UI:**
+   - Captura de `http://127.0.0.1:8000/docs` (o URL pública HTTPS) mostrando los tags `Demostraciones`, `Movimientos`, `Vehículos`, `Comandos`, `Estado` e `Historial`.
+2. **Evidencia 2 — POST individual con dos clientes WebSocket simultáneos:**
+   - Dos pestañas de Thunder Client conectadas a `ws://127.0.0.1:8000/ws/vehiculos/6` (ambas mostrando `estado_inicial`).
+   - Una tercera pestaña enviando `POST /api/movimientos` con cuerpo:
+     `{"id_vehiculo": 6, "id_comando": 38, "origen": "Thunder Client"}`.
+   - Ambas pestañas WebSocket mostrando la llegada simultánea del evento `movimiento_individual`.
+3. **Evidencia 3 — GET Historial (últimos 10 registros):**
+   - Petición `GET /api/vehiculos/6/historial` en Thunder Client mostrando los registros ordenados descendente por fecha.
+4. **Evidencia 4 — DEMO temporizada y control de concurrencia:**
+   - Petición `POST /api/demos/5/ejecutar` recibiendo código `202 Accepted`.
+   - Clientes WebSocket recibiendo `demo_inicio` y los eventos `demo_paso` en orden.
+   - Envío inmediato de una segunda petición `POST /api/demos/5/ejecutar` mostrando la respuesta `409 Conflict`.
+5. **Evidencia 5 — Cancelación de DEMO y verificación de historial:**
+   - Petición `POST /api/demos/5/cancelar` recibiendo código `200 OK` y evento `demo_cancelada` en WebSocket.
+   - Petición `GET /api/vehiculos/6/historial` comprobando que los pasos de la DEMO **no** agregaron registros al historial individual.
+6. **Evidencia 6 — Servicio persistente (systemd):**
+   - Ejecución de `test_examen26.py` con resultado `8/8 PASS` o estado de `systemctl status vehiculo_iot_api`.
