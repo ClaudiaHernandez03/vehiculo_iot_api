@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Excavadora IoT CAT-320">
+  <defs>
+    <linearGradient id="purpleAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="50%" stop-color="#9333ea"/>
+      <stop offset="100%" stop-color="#6b21a8"/>
+    </linearGradient>
+    <linearGradient id="darkObsidian" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#191326"/>
+      <stop offset="100%" stop-color="#09070e"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="116" height="116" rx="26" fill="url(#darkObsidian)" stroke="#a855f7" stroke-width="5"/>
+  <rect x="20" y="88" width="66" height="20" rx="10" fill="#07050b" stroke="#7e22ce" stroke-width="3"/>
+  <circle cx="32" cy="98" r="5" fill="#c084fc"/>
+  <circle cx="53" cy="98" r="5" fill="#c084fc"/>
+  <circle cx="74" cy="98" r="5" fill="#c084fc"/>
+  <path d="M24 85 L78 85 L74 56 L42 56 L36 68 L24 68 Z" fill="url(#purpleAccent)" stroke="#09070e" stroke-width="2.5"/>
+  <polygon points="45,60 68,60 66,73 40,73" fill="#0f0b1a" stroke="#e9d5ff" stroke-width="1.5"/>
+  <path d="M68 64 L92 32 L106 38 L86 72 Z" fill="url(#purpleAccent)" stroke="#09070e" stroke-width="2.5"/>
+  <path d="M92 32 L112 58 L103 64 L88 40 Z" fill="url(#purpleAccent)" stroke="#09070e" stroke-width="2.5"/>
+  <path d="M104 58 L116 64 C118 76 106 84 94 80 L98 68 Z" fill="#2e1065" stroke="#c084fc" stroke-width="2"/>
+  <path d="M24 38 A14 14 0 0 1 38 24" fill="none" stroke="#d8b4fe" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M18 38 A22 22 0 0 1 38 18" fill="none" stroke="#a855f7" stroke-width="3.5" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="35" cy="35" r="3.5" fill="#e9d5ff"/>
+</svg>

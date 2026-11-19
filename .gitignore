@@ -1,5 +1,7 @@
 .venv/
 .env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -9,3 +11,7 @@ deploy_windows/
 *.log
 *.pem
 *.key
+.orden_seq_state.json*
+.orden_seq_state.lock
+
+sql/00_respaldo_previo_mysql_local.sql

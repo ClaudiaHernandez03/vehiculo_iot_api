@@ -42,6 +42,11 @@ echo "Instalando dependencias en el entorno virtual..."
 ./.venv/bin/pip install --upgrade pip
 ./.venv/bin/pip install -r requirements.txt
 
+# 3.5. Reconstrucción e inicialización idempotente de la base de datos en Amazon RDS
+echo "Verificando conexión y aplicando reconstrucción idempotente en MySQL / Amazon RDS..."
+./.venv/bin/python sql/ejecutar_migracion_y_validacion.py
+./.venv/bin/python probar_conexion.py
+
 # 4. Configuración y habilitación del servicio systemd
 echo "Configurando servicio systemd vehiculo_iot_api.service..."
 SERVICE_PATH="/etc/systemd/system/vehiculo_iot_api.service"
