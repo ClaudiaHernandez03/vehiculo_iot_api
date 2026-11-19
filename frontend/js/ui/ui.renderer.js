@@ -572,13 +572,104 @@ export class UiRenderer {
 
     if (this.elAdminUnitsTitle) {
       this.elAdminUnitsTitle.textContent =
-        role === ROLES.USUARIO ? 'Mis Vehículos Asignados' : 'Unidades Físicas en Inventario (Amazon RDS)';
+        role === ROLES.USUARIO
+          ? 'Mis Vehículos Asignados (Aislamiento BOLA/IDOR)'
+          : role === ROLES.INVITADO
+          ? 'Catálogo Público en Sala de Exhibición'
+          : 'Unidades Físicas en Inventario (Amazon RDS)';
     }
 
     // Mostrar/ocultar paneles exclusivos de Administrador
     document.querySelectorAll('[data-admin-only="true"]').forEach((el) => {
       el.hidden = role !== ROLES.ADMIN;
     });
+
+    // Selector de Cuenta de Comprador (solo visible en rol USUARIO)
+    const buyerSelectEl = document.getElementById('admin-buyer-account-select');
+    if (buyerSelectEl) {
+      buyerSelectEl.hidden = role !== ROLES.USUARIO;
+      const buyerClients = (adminSnapshot.clients || []).filter((c) => c.rol === 'USUARIO');
+      if (buyerClients.length > 0) {
+        this.populateSelectIfChanged(
+          buyerSelectEl,
+          buyerClients.map((c) => ({
+            value: String(c.id_cliente),
+            label: `#${c.id_cliente} · ${c.nombre.split(' (')[0]}`
+          })),
+          String(adminSnapshot.currentBuyerId || '101')
+        );
+      }
+    }
+
+    // Switch de Consentimiento de Soporte Técnico (visible en ADMIN y USUARIO propietario)
+    const supportSwitchEl = document.getElementById('admin-support-consent-switch');
+    if (supportSwitchEl) {
+      supportSwitchEl.checked = Boolean(adminSnapshot.adminSupportConsent);
+      if (supportSwitchEl.parentElement) {
+        supportSwitchEl.parentElement.hidden =
+          role === ROLES.INVITADO || (role === ROLES.USUARIO && !adminSnapshot.isCurrentBuyerOwner);
+      }
+    }
+
+    // Restringir sub-pestañas de Administración según los permisos reales del rol activo
+    const allowedSubviews = adminSnapshot.permissions?.allowedSubviews || [
+      'unidades',
+      'demos',
+      'exhibicion',
+      'auditoria'
+    ];
+    let activeSubtabAllowed = false;
+    document.querySelectorAll('[data-admin-subview]').forEach((btn) => {
+      const target = btn.getAttribute('data-admin-subview');
+      const isAllowed = allowedSubviews.includes(target);
+      btn.hidden = !isAllowed;
+      btn.disabled = !isAllowed;
+      if (target === 'unidades') {
+        btn.innerHTML =
+          role === ROLES.USUARIO
+            ? '<i class="bi bi-truck-flatbed me-1"></i>Mis Vehículos'
+            : role === ROLES.INVITADO
+            ? '<i class="bi bi-eye me-1"></i>Catálogo Público'
+            : '<i class="bi bi-truck-flatbed me-1"></i>Unidades y Clientes';
+      }
+      if (btn.classList.contains('active') && isAllowed) {
+        activeSubtabAllowed = true;
+      }
+    });
+
+    // Si la sub-pestaña actual quedó prohibida para el rol seleccionado, cambiar a la primera permitida
+    if (!activeSubtabAllowed && allowedSubviews.length > 0) {
+      const fallbackSub = allowedSubviews[0];
+      const subviews = {
+        unidades: document.getElementById('admin-subview-unidades'),
+        demos: document.getElementById('admin-subview-demos'),
+        exhibicion: document.getElementById('admin-subview-exhibicion'),
+        auditoria: document.getElementById('admin-subview-auditoria')
+      };
+      document.querySelectorAll('[data-admin-subview]').forEach((b) => {
+        b.classList.toggle('active', b.getAttribute('data-admin-subview') === fallbackSub);
+      });
+      Object.entries(subviews).forEach(([key, panel]) => {
+        if (!panel) return;
+        const isMatch = key === fallbackSub;
+        panel.hidden = !isMatch;
+        panel.classList.toggle('active-subview', isMatch);
+      });
+    }
+
+    // Bloquear formularios del Editor DEMO si el rol/comprador no es propietario de la unidad (BOLA/IDOR)
+    const canEditDemos = Boolean(adminSnapshot.permissions?.canEditDemos);
+    ['form-admin-add-demo-step', 'form-admin-new-demo'].forEach((formId) => {
+      const formEl = document.getElementById(formId);
+      if (formEl) {
+        formEl.querySelectorAll('input, select, button').forEach((ctrl) => {
+          ctrl.disabled = !canEditDemos;
+        });
+      }
+    });
+
+    // Reflejar permisos visualmente en los botones de la ventana Control
+    this.applyControlRoleRestrictions(adminSnapshot);
 
     // Métricas del Dashboard
     if (this.elMetricModels) this.elMetricModels.textContent = String(adminSnapshot.metrics.totalModels);
@@ -748,7 +839,7 @@ export class UiRenderer {
           btnDel.type = 'button';
           btnDel.className = 'btn btn-sm btn-outline-danger py-0 px-2';
           btnDel.textContent = 'Quitar';
-          btnDel.disabled = role === ROLES.INVITADO;
+          btnDel.disabled = !canEditDemos;
           btnDel.setAttribute('data-delete-demo-step', String(step.id_demo_movimiento));
           tdAct.appendChild(btnDel);
 
@@ -810,6 +901,58 @@ export class UiRenderer {
         tr.append(tdTime, tdActor, tdAction, tdRes, tdOut);
         this.elAdminAuditTbody.appendChild(tr);
       }
+    }
+  }
+
+  /**
+   * Refleja visualmente en la ventana `Control` las restricciones RBAC/BOLA del rol activo:
+   * - `INVITADO`: Solo Orugas (#9,#11,#2,#4), Luz (#8) y DETENER (#0) permitidos cuando su sesión de 60s está activa;
+   *   Brazo/Torre (#1,#3,#10,#12), Velocidad (#5), Sonido (#6) y DEMO quedan bloqueados visualmente (403).
+   * - `USUARIO` sin propiedad (ej. Comprador #102 sobre Unidad #1): Bloqueo BOLA/IDOR (403).
+   * - `ADMIN` sin consentimiento de soporte sobre unidad vendida: Bloqueo de operación (403).
+   */
+  applyControlRoleRestrictions(adminSnapshot) {
+    if (!adminSnapshot || typeof document === 'undefined') return;
+    const role = adminSnapshot.currentRole;
+    const isOwner = Boolean(adminSnapshot.isCurrentBuyerOwner);
+    const supportOk = Boolean(adminSnapshot.adminSupportConsent);
+    const guest = adminSnapshot.guestSession || {};
+    const allowedGuestCodes = guest.allowedCodes || [9, 11, 2, 4, 8];
+
+    document.querySelectorAll('[data-command-code]').forEach((btn) => {
+      const code = Number(btn.getAttribute('data-command-code'));
+      let restricted = false;
+
+      if (role === ROLES.ADMIN && !supportOk) {
+        restricted = true;
+      } else if (role === ROLES.USUARIO && !isOwner) {
+        restricted = true;
+      } else if (role === ROLES.INVITADO) {
+        restricted = !guest.active || !allowedGuestCodes.includes(code);
+      }
+
+      btn.style.opacity = restricted ? '0.38' : '1';
+      btn.style.filter = restricted ? 'grayscale(0.65)' : 'none';
+    });
+
+    const rightZone = document.getElementById('right-joystick-zone');
+    const leftZone = document.getElementById('left-joystick-zone');
+    const demoRunBtn = document.getElementById('btn-func-demo');
+
+    const fullRestricted =
+      (role === ROLES.ADMIN && !supportOk) ||
+      (role === ROLES.USUARIO && !isOwner) ||
+      (role === ROLES.INVITADO && !guest.active);
+
+    if (leftZone) {
+      leftZone.style.opacity = fullRestricted ? '0.45' : '1';
+    }
+    if (rightZone) {
+      rightZone.style.opacity = fullRestricted || role === ROLES.INVITADO ? '0.38' : '1';
+    }
+    if (demoRunBtn) {
+      const demoRestricted = fullRestricted || role === ROLES.INVITADO;
+      demoRunBtn.style.opacity = demoRestricted ? '0.38' : '1';
     }
   }
 

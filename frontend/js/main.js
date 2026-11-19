@@ -285,7 +285,7 @@ class ExcavatorControlApp {
     if (btnStartDemo) {
       btnStartDemo.addEventListener('click', (event) => {
         event.preventDefault();
-        const auth = this.adminController.authorizeVehicleOperation(APP_CONFIG.VEHICLE_ID, null);
+        const auth = this.adminController.authorizeVehicleOperation(APP_CONFIG.VEHICLE_ID, 99);
         if (!auth.allowed) {
           this.ui.renderOperationFeedback({
             type: 'danger',

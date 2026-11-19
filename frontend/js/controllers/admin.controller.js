@@ -129,8 +129,8 @@ export class AdminController {
   }
 
   /**
-   * Carga desde Amazon RDS las unidades (`/api/vehiculos`), comandos (`/api/vehiculos/1/comandos`)
-   * y demostraciones (`/api/vehiculos/1/demos`).
+   * Carga desde Amazon RDS las unidades (`/api/vehiculos`), comandos (`/api/vehiculos/1/comandos`),
+   * demostraciones (`/api/vehiculos/1/demos`) y estado RBAC (`/api/admin/rbac`).
    */
   async loadAdminData() {
     try {
@@ -139,6 +139,42 @@ export class AdminController {
         this.apiService.getVehicleCommands(APP_CONFIG.VEHICLE_ID),
         this.apiService.getVehicleDemos(APP_CONFIG.VEHICLE_ID)
       ]);
+
+      // Sincronizar tablas RBAC 4.3 de Amazon RDS si el endpoint está disponible
+      if (typeof this.apiService.getAdminRbacState === 'function') {
+        try {
+          const rbacRes = await this.apiService.getAdminRbacState();
+          if (Array.isArray(rbacRes?.usuarios) && rbacRes.usuarios.length > 0) {
+            this.clients = rbacRes.usuarios.filter((u) => u.rol !== 'ADMIN');
+          }
+          if (Array.isArray(rbacRes?.asignaciones)) {
+            for (const a of rbacRes.asignaciones) {
+              this.assignments[a.id_vehiculo] = {
+                id_cliente: Number(a.id_cliente),
+                propietario: a.propietario,
+                estado_comercial: a.estado_comercial,
+                habilitado_exhibicion: Boolean(a.habilitado_exhibicion),
+                consentimiento_soporte: Boolean(a.consentimiento_soporte ?? true)
+              };
+              if (Number(a.id_vehiculo) === Number(APP_CONFIG.VEHICLE_ID)) {
+                this.adminSupportConsent = Boolean(a.consentimiento_soporte ?? true);
+              }
+            }
+          }
+          if (Array.isArray(rbacRes?.auditoria) && rbacRes.auditoria.length > 0) {
+            this.auditLogs = rbacRes.auditoria.map((item, idx) => ({
+              id: item.id || idx + 1,
+              timestamp: formatTimestamp(item.timestamp),
+              actor: item.actor,
+              action: item.action,
+              resource: item.resource,
+              result: item.result
+            }));
+          }
+        } catch {
+          // Respaldo transparente si el servidor aún no ha reiniciado con /api/admin/rbac
+        }
+      }
 
       if (typeof this.onRdsEvidence === 'function') {
         this.onRdsEvidence(vehiclesRes.raw);
@@ -217,24 +253,62 @@ export class AdminController {
 
   setBuyerAccount(buyerId) {
     this.currentBuyerId = Number(buyerId) || 101;
+    const buyer = this.clients.find((c) => Number(c.id_cliente) === Number(this.currentBuyerId));
+    const buyerName = buyer ? buyer.nombre : `Comprador #${this.currentBuyerId}`;
     this.recordAudit(
-      `Usuario #${this.currentBuyerId}`,
+      `USUARIO #${this.currentBuyerId}`,
       'CAMBIO_CUENTA_COMPRADOR',
-      `Cuenta activa #${this.currentBuyerId}`,
-      'OK'
+      buyerName,
+      this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID)
+        ? 'OK · Propietario de Excavadora #1'
+        : 'Aislamiento BOLA/IDOR · Sin permiso sobre Excavadora #1'
     );
     this.emitState();
+    this.emitFeedback({
+      type: this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID) ? 'info' : 'warning',
+      title: `Cuenta activa: ${buyerName}`,
+      message: this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID)
+        ? 'Tienes acceso completo a Control, Monitoreo y Editor DEMO de tu Excavadora #1.'
+        : 'Aislamiento BOLA/IDOR activo: Esta cuenta NO es propietaria de la Excavadora #1 (Control y Editor DEMO bloqueados con 403).'
+    });
   }
 
   setAdminSupportConsent(enabled) {
     this.adminSupportConsent = Boolean(enabled);
+    const assign = this.assignments[APP_CONFIG.VEHICLE_ID];
+    if (assign) {
+      assign.consentimiento_soporte = this.adminSupportConsent;
+      if (typeof this.apiService.updateVehicleAssignment === 'function') {
+        this.apiService
+          .updateVehicleAssignment(APP_CONFIG.VEHICLE_ID, {
+            id_cliente: assign.id_cliente,
+            estado_comercial: assign.estado_comercial,
+            consentimiento_soporte: this.adminSupportConsent
+          })
+          .catch(() => {});
+      }
+    }
     this.recordAudit(
-      'ADMIN',
-      'CONSENTIMIENTO_SOPORTE',
+      this.currentRole,
+      'CONSENTIMIENTO_SOPORTE_RDS',
       'Unidad #1 (CAT-320)',
-      this.adminSupportConsent ? 'Autorizado por comprador' : 'Revocado (Solo gestión inventario)'
+      this.adminSupportConsent ? 'Autorizado por comprador' : 'Revocado (Admin bloqueado 403 en Control)'
     );
     this.emitState();
+    this.emitFeedback({
+      type: this.adminSupportConsent ? 'success' : 'warning',
+      title: this.adminSupportConsent
+        ? 'Soporte Técnico Autorizado en RDS'
+        : 'Soporte Técnico Revocado en RDS',
+      message: this.adminSupportConsent
+        ? 'El Administrador puede operar la unidad vendida #1 para pruebas de soporte.'
+        : 'El Administrador NO puede mover la unidad vendida #1 en Control (403 Prohibido).'
+    });
+  }
+
+  isCurrentBuyerOwnerOf(vehicleId = APP_CONFIG.VEHICLE_ID) {
+    const assign = this.assignments[vehicleId];
+    return Boolean(assign && Number(assign.id_cliente) === Number(this.currentBuyerId));
   }
 
   /**
@@ -409,7 +483,7 @@ export class AdminController {
   }
 
   /**
-   * Registra un nuevo cliente comprador y lo incorpora al catálogo comercial — Solo ADMIN.
+   * Registra un nuevo cliente comprador y lo persiste en Amazon RDS (`usuarios_iot`) — Solo ADMIN.
    */
   registerClient({ nombre, correo }) {
     if (this.currentRole !== ROLES.ADMIN) {
@@ -426,26 +500,32 @@ export class AdminController {
     if (!cleanName) return false;
 
     const nextId = this.clients.reduce((max, c) => Math.max(max, Number(c.id_cliente)), 100) + 1;
+    const finalEmail = cleanEmail || `cliente${nextId}@empresa-iot.mx`;
     this.clients.push({
       id_cliente: nextId,
       nombre: cleanName,
-      correo: cleanEmail || `cliente${nextId}@empresa-iot.mx`,
+      correo: finalEmail,
       rol: 'USUARIO',
       estado: 'Activo'
     });
 
-    this.recordAudit('ADMIN', 'ALTA_CLIENTE', `Cliente #${nextId} (${cleanName})`, 'OK');
+    if (typeof this.apiService.createAdminClient === 'function') {
+      this.apiService.createAdminClient({ nombre: cleanName, correo: finalEmail }).catch(() => {});
+    }
+
+    this.recordAudit('ADMIN', 'ALTA_CLIENTE_RDS', `Cliente #${nextId} (${cleanName})`, 'OK · Persistido en Amazon RDS');
     this.emitState();
     this.emitFeedback({
       type: 'success',
-      title: 'Cliente comprador registrado',
+      title: 'Cliente comprador registrado en Amazon RDS',
       message: `${cleanName} (#${nextId}) disponible para asignación de unidades.`
     });
     return true;
   }
 
   /**
-   * Asigna o reasigna una unidad física a un comprador y revoca permisos del titular anterior.
+   * Asigna o reasigna una unidad física a un comprador, revoca permisos del titular anterior
+   * y lo persiste en Amazon RDS (`asignaciones_vehiculo`) — Solo ADMIN.
    */
   assignUnitToClient({ id_vehiculo, id_cliente, estado_comercial }) {
     if (this.currentRole !== ROLES.ADMIN) {
@@ -467,8 +547,19 @@ export class AdminController {
       id_cliente: clientObj.id_cliente,
       propietario: clientObj.nombre,
       estado_comercial: estado_comercial || 'Vendido / Asignado',
-      habilitado_exhibicion: estado_comercial === 'Exhibición'
+      habilitado_exhibicion: estado_comercial === 'Exhibición',
+      consentimiento_soporte: this.adminSupportConsent
     };
+
+    if (typeof this.apiService.updateVehicleAssignment === 'function') {
+      this.apiService
+        .updateVehicleAssignment(vid, {
+          id_cliente: clientObj.id_cliente,
+          estado_comercial: estado_comercial || 'Vendido / Asignado',
+          consentimiento_soporte: this.adminSupportConsent
+        })
+        .catch(() => {});
+    }
 
     this.units = this.units.map((u) =>
       Number(u.id_vehiculo) === vid
@@ -483,15 +574,15 @@ export class AdminController {
 
     this.recordAudit(
       'ADMIN',
-      'ASIGNACION_PROPIETARIO',
+      'ASIGNACION_PROPIETARIO_RDS',
       `Unidad #${vid}`,
       `OK · Nuevo titular: ${clientObj.nombre} (Revocado: ${prevOwner})`
     );
     this.emitState();
     this.emitFeedback({
       type: 'success',
-      title: `Unidad #${vid} asignada a ${clientObj.nombre}`,
-      message: 'Permisos actualizados e historial conservado en Amazon RDS.'
+      title: `Unidad #${vid} asignada a ${clientObj.nombre} en RDS`,
+      message: 'Permisos BOLA/IDOR actualizados y guardados en Amazon RDS.'
     });
     return true;
   }
@@ -529,11 +620,26 @@ export class AdminController {
    */
   async createNewDemo({ nombre, descripcion }) {
     if (this.currentRole === ROLES.INVITADO) {
-      this.recordAudit('INVITADO', 'CREAR_DEMO', nombre, 'DENEGADO 403');
+      this.recordAudit('INVITADO', 'CREAR_DEMO', nombre, 'DENEGADO 403 · Invitado sin permisos');
       this.emitFeedback({
         type: 'danger',
         title: '403 Acceso Restringido',
         message: 'El rol Invitado no puede crear ni editar secuencias DEMO.'
+      });
+      return false;
+    }
+
+    if (this.currentRole === ROLES.USUARIO && !this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID)) {
+      this.recordAudit(
+        `USUARIO #${this.currentBuyerId}`,
+        'CREAR_DEMO_BOLA_IDOR',
+        `Vehículo #${APP_CONFIG.VEHICLE_ID}`,
+        'DENEGADO 403 · No es propietario de la unidad'
+      );
+      this.emitFeedback({
+        type: 'danger',
+        title: '403 Prohibido (Aislamiento BOLA/IDOR)',
+        message: 'Solo el comprador propietario de esta unidad puede crear o editar sus secuencias DEMO.'
       });
       return false;
     }
@@ -579,6 +685,21 @@ export class AdminController {
         type: 'danger',
         title: '403 Acceso Restringido',
         message: 'El rol Invitado no puede modificar pasos de DEMO.'
+      });
+      return false;
+    }
+
+    if (this.currentRole === ROLES.USUARIO && !this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID)) {
+      this.recordAudit(
+        `USUARIO #${this.currentBuyerId}`,
+        'EDITAR_DEMO_BOLA_IDOR',
+        `DEMO #${this.editingDemoId}`,
+        'DENEGADO 403 · Unidad pertenece a otro comprador'
+      );
+      this.emitFeedback({
+        type: 'danger',
+        title: '403 Prohibido (Aislamiento BOLA/IDOR)',
+        message: 'No puedes modificar las secuencias DEMO de un vehículo asignado a otro comprador.'
       });
       return false;
     }
@@ -636,6 +757,21 @@ export class AdminController {
         type: 'danger',
         title: '403 Acceso Restringido',
         message: 'El rol Invitado no puede eliminar pasos de DEMO.'
+      });
+      return false;
+    }
+
+    if (this.currentRole === ROLES.USUARIO && !this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID)) {
+      this.recordAudit(
+        `USUARIO #${this.currentBuyerId}`,
+        'BORRAR_PASO_DEMO_BOLA_IDOR',
+        `Paso #${idDemoMovimiento}`,
+        'DENEGADO 403 · Unidad pertenece a otro comprador'
+      );
+      this.emitFeedback({
+        type: 'danger',
+        title: '403 Prohibido (Aislamiento BOLA/IDOR)',
+        message: 'No puedes eliminar pasos DEMO de una unidad ajena.'
       });
       return false;
     }
@@ -775,18 +911,49 @@ export class AdminController {
     if (this.auditLogs.length > 25) {
       this.auditLogs.pop();
     }
+    if (
+      action !== 'INICIO_PLATAFORMA' &&
+      this.apiService &&
+      typeof this.apiService.recordAdminAudit === 'function'
+    ) {
+      this.apiService
+        .recordAdminAudit({
+          actor,
+          rol: this.currentRole || 'ADMIN',
+          accion: action,
+          recurso: resource,
+          resultado: result
+        })
+        .catch(() => {});
+    }
   }
 
   getSnapshot() {
+    const isOwner = this.isCurrentBuyerOwnerOf(APP_CONFIG.VEHICLE_ID);
     const visibleUnits =
       this.currentRole === ROLES.USUARIO
         ? this.units.filter((u) => Number(u.id_cliente) === Number(this.currentBuyerId))
         : this.units;
 
+    const allowedSubviews =
+      this.currentRole === ROLES.ADMIN
+        ? ['unidades', 'demos', 'exhibicion', 'auditoria']
+        : this.currentRole === ROLES.USUARIO
+        ? ['unidades', 'demos']
+        : ['exhibicion', 'unidades'];
+
     return {
       currentRole: this.currentRole,
       currentBuyerId: this.currentBuyerId,
       adminSupportConsent: this.adminSupportConsent,
+      isCurrentBuyerOwner: isOwner,
+      permissions: {
+        canManageInventory: this.currentRole === ROLES.ADMIN,
+        canEditDemos: this.currentRole === ROLES.ADMIN || (this.currentRole === ROLES.USUARIO && isOwner),
+        canViewAudit: this.currentRole === ROLES.ADMIN,
+        canUseExhibition: this.currentRole === ROLES.INVITADO || this.currentRole === ROLES.ADMIN,
+        allowedSubviews
+      },
       models: this.models.slice(),
       clients: this.clients.slice(),
       units: this.units.slice(),

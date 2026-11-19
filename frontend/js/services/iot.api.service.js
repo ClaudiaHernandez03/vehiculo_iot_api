@@ -288,6 +288,44 @@ export class IotApiService {
   async cancelVehicleDemo(vehicleId = APP_CONFIG.VEHICLE_ID) {
     return this.client.post(APP_CONFIG.ENDPOINTS.VEHICULO_DEMO_CANCELAR(vehicleId));
   }
+
+  /**
+   * 22. Obtiene desde Amazon RDS el estado RBAC 4.3 (`usuarios_iot`, `asignaciones_vehiculo`, `bitacora_auditoria_iot`)
+   */
+  async getAdminRbacState() {
+    return this.client.get('/api/admin/rbac');
+  }
+
+  /**
+   * 23. Registra un nuevo cliente comprador en `usuarios_iot` de Amazon RDS
+   */
+  async createAdminClient({ nombre, correo }) {
+    return this.client.post('/api/admin/clientes', { nombre, correo });
+  }
+
+  /**
+   * 24. Actualiza la asignación de propietario, estado comercial y consentimiento de soporte en Amazon RDS
+   */
+  async updateVehicleAssignment(idVehiculo, { id_cliente, estado_comercial, consentimiento_soporte = true }) {
+    return this.client.put(`/api/admin/asignaciones/${Number(idVehiculo)}`, {
+      id_cliente: Number(id_cliente),
+      estado_comercial: String(estado_comercial || 'Vendido / Asignado'),
+      consentimiento_soporte: Boolean(consentimiento_soporte)
+    });
+  }
+
+  /**
+   * 25. Persiste un evento en `bitacora_auditoria_iot` de Amazon RDS
+   */
+  async recordAdminAudit({ actor, rol, accion, recurso, resultado }) {
+    return this.client.post('/api/admin/auditoria', {
+      actor,
+      rol,
+      accion,
+      recurso,
+      resultado
+    });
+  }
 }
 
 export const iotApiService = new IotApiService();

@@ -58,8 +58,13 @@ service = VehiculoIoTService(           # Servicio de negocio POO que orquesta R
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Ciclo de vida de FastAPI: al apagar el servidor, cancela watchdogs, las DEMO activas
-    y cierra limpiamente todas las conexiones WebSocket."""
+    """Ciclo de vida de FastAPI: al iniciar asegura las tablas RBAC 4.3 en Amazon RDS;
+    al apagar el servidor, cancela watchdogs, las DEMO activas y cierra conexiones WebSocket."""
+    try:
+        db.inicializar_esquema_rbac_admin()
+        logger.info("Esquema RBAC 4.3 (usuarios_iot, asignaciones_vehiculo, bitacora_auditoria_iot) verificado en Amazon RDS.")
+    except Exception:
+        logger.exception("No se pudo inicializar el esquema RBAC 4.3 al arranque.")
     yield
     await service.cancel_all_watchdogs()
     await demo_runner.cancel_all()
@@ -314,6 +319,48 @@ async def detener_vehiculo(
         id_vehiculo,
         p=p,
         sesion_control_header=x_control_session,
+    )
+
+
+# ==============================================================================
+# 6.B ADMINISTRACIÓN IoT MULTIUSUARIO (ACTIVIDAD 4.3 · RBAC / BOLA EN AMAZON RDS)
+# ==============================================================================
+@app.get("/api/admin/rbac", tags=["Administración 4.3"])
+def obtener_estado_rbac():
+    """Devuelve desde Amazon RDS los usuarios/roles, las asignaciones comerciales
+    de propiedad por vehículo y la bitácora de auditoría."""
+    db.inicializar_esquema_rbac_admin()
+    return db.obtener_estado_rbac_admin()
+
+
+@app.post("/api/admin/clientes", status_code=201, tags=["Administración 4.3"], dependencies=[Depends(check_api_key)])
+def crear_cliente_rbac(payload: dict = Body(...)):
+    """Registra un nuevo comprador en `usuarios_iot` de Amazon RDS."""
+    nombre = str(payload.get("nombre") or "").strip()
+    correo = str(payload.get("correo") or "").strip()
+    if not nombre:
+        raise ValueError("El nombre del cliente comprador es obligatorio.")
+    return db.crear_cliente_rbac(nombre, correo or "comprador@empresa-iot.mx")
+
+
+@app.put("/api/admin/asignaciones/{id_vehiculo}", tags=["Administración 4.3"], dependencies=[Depends(check_api_key)])
+def actualizar_asignacion_rbac(id_vehiculo: int, payload: dict = Body(...)):
+    """Asigna o revoca el propietario y estado comercial de un vehículo en Amazon RDS."""
+    id_usuario = int(payload.get("id_cliente") or payload.get("id_usuario") or 101)
+    estado_comercial = str(payload.get("estado_comercial") or "Vendido / Asignado")
+    consentimiento = bool(payload.get("consentimiento_soporte", True))
+    return db.asignar_vehiculo_rbac(id_vehiculo, id_usuario, estado_comercial, consentimiento)
+
+
+@app.post("/api/admin/auditoria", status_code=201, tags=["Administración 4.3"])
+def registrar_auditoria_rbac(payload: dict = Body(...)):
+    """Persiste en Amazon RDS (`bitacora_auditoria_iot`) un evento de auditoría o rechazo RBAC/BOLA."""
+    return db.registrar_auditoria_rbac(
+        actor=str(payload.get("actor") or "SISTEMA"),
+        rol=str(payload.get("rol") or "ADMIN"),
+        accion=str(payload.get("accion") or "EVENTO"),
+        recurso=str(payload.get("recurso") or "Vehículo #1"),
+        resultado=str(payload.get("resultado") or "OK"),
     )
 
 

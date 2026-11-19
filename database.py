@@ -427,3 +427,186 @@ class Database:
             cursor.callproc("sp_actualizar_estado", [id_vehiculo, id_comando, int(conectado)])
             self._collect_results(cursor)
             return {"transaccion": "confirmada", "id_vehiculo": id_vehiculo, "id_comando": id_comando}
+
+    # ==========================================================================
+    # MÓDULO 4.3: TABLAS Y OPERACIONES RBAC / BOLA / AUDITORÍA EN AMAZON RDS
+    # ==========================================================================
+
+    def inicializar_esquema_rbac_admin(self) -> None:
+        """Crea de forma idempotente en Amazon RDS las tablas de la Actividad 4.3
+        (`usuarios_iot`, `asignaciones_vehiculo`, `bitacora_auditoria_iot`), inserta
+        los roles y usuarios base, asigna la unidad #1 al comprador #101 y depura
+        pasos duplicados en `demo_movimientos`."""
+        with self._cursor_session(commit=True, dictionary=True) as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS `usuarios_iot` (
+                  `id_usuario` INT NOT NULL AUTO_INCREMENT,
+                  `nombre` VARCHAR(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `correo` VARCHAR(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `rol` ENUM('ADMIN', 'USUARIO', 'INVITADO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'USUARIO',
+                  `permisos` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `activo` TINYINT(1) NOT NULL DEFAULT 1,
+                  `fecha_registro` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_usuario`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS `asignaciones_vehiculo` (
+                  `id_vehiculo` INT NOT NULL,
+                  `id_usuario` INT NOT NULL,
+                  `estado_comercial` VARCHAR(40) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Vendido / Asignado',
+                  `consentimiento_soporte` TINYINT(1) NOT NULL DEFAULT 1,
+                  `habilitado_exhibicion` TINYINT(1) NOT NULL DEFAULT 1,
+                  `fecha_actualizacion` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_vehiculo`),
+                  KEY `fk_asig_usuario` (`id_usuario`),
+                  CONSTRAINT `fk_asig_vehiculo` FOREIGN KEY (`id_vehiculo`) REFERENCES `vehiculos` (`id_vehiculo`) ON DELETE CASCADE ON UPDATE CASCADE,
+                  CONSTRAINT `fk_asig_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuarios_iot` (`id_usuario`) ON DELETE RESTRICT ON UPDATE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS `bitacora_auditoria_iot` (
+                  `id_auditoria` INT NOT NULL AUTO_INCREMENT,
+                  `actor` VARCHAR(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `rol` VARCHAR(30) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `accion` VARCHAR(80) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `recurso` VARCHAR(120) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `resultado` VARCHAR(160) COLLATE utf8mb4_unicode_ci NOT NULL,
+                  `fecha_evento` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_auditoria`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO `usuarios_iot` (`id_usuario`, `nombre`, `correo`, `rol`, `permisos`, `activo`) VALUES
+                  (100, 'Administrador General (Empresa IoT)', 'admin@cat320-iot.mx', 'ADMIN', 'CRUD Inventario, Clientes, Asignaciones, Editor DEMO Fábrica, Auditoría Global', 1),
+                  (101, 'Claudia América Hernández (Comprador A)', 'claudia.comprador@empresa-iot.mx', 'USUARIO', 'Control Total y Monitoreo de Mis Vehículos (#1), Editor DEMO Propia (1-4 pasos)', 1),
+                  (102, 'Constructora Industrial del Centro (Comprador B)', 'operaciones@constructora-centro.mx', 'USUARIO', 'Control y Editor DEMO solo en sus unidades asignadas (Aislamiento BOLA/IDOR)', 1),
+                  (103, 'Visitante Sala de Exhibición (Prospecto)', 'exhibicion@cat320-iot.mx', 'INVITADO', 'Catálogo Público y Prueba Temporal Exclusiva 60s (Orugas #9,#11,#2,#4 + Luz #8)', 1)
+                ON DUPLICATE KEY UPDATE
+                  `nombre` = VALUES(`nombre`),
+                  `rol` = VALUES(`rol`),
+                  `permisos` = VALUES(`permisos`)
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO `asignaciones_vehiculo` (`id_vehiculo`, `id_usuario`, `estado_comercial`, `consentimiento_soporte`, `habilitado_exhibicion`)
+                SELECT 1, 101, 'Vendido / Asignado', 1, 1
+                FROM `vehiculos` WHERE `id_vehiculo` = 1
+                ON DUPLICATE KEY UPDATE
+                  `habilitado_exhibicion` = VALUES(`habilitado_exhibicion`)
+                """
+            )
+            cursor.execute("DELETE FROM `demo_movimientos` WHERE `id_demo_movimiento` IN (1, 2, 3)")
+
+    def obtener_estado_rbac_admin(self) -> dict[str, Any]:
+        """Consulta desde Amazon RDS los usuarios/roles, las asignaciones de propiedad
+        por vehículo y los últimos 20 eventos de la bitácora de auditoría."""
+        with self._cursor_session(commit=False, dictionary=True) as cursor:
+            cursor.execute(
+                "SELECT id_usuario AS id_cliente, nombre, correo, rol, permisos, activo, fecha_registro "
+                "FROM usuarios_iot ORDER BY id_usuario ASC"
+            )
+            usuarios = [self._json_safe(r) for r in cursor.fetchall()]
+
+            cursor.execute(
+                """
+                SELECT a.id_vehiculo, a.id_usuario AS id_cliente, u.nombre AS propietario,
+                       u.rol AS rol_propietario, a.estado_comercial, a.consentimiento_soporte,
+                       a.habilitado_exhibicion, a.fecha_actualizacion
+                FROM asignaciones_vehiculo a
+                INNER JOIN usuarios_iot u ON u.id_usuario = a.id_usuario
+                ORDER BY a.id_vehiculo ASC
+                """
+            )
+            asignaciones = [self._json_safe(r) for r in cursor.fetchall()]
+
+            cursor.execute(
+                "SELECT id_auditoria AS id, actor, rol, accion AS action, recurso AS resource, "
+                "resultado AS result, fecha_evento AS timestamp "
+                "FROM bitacora_auditoria_iot ORDER BY id_auditoria DESC LIMIT 20"
+            )
+            auditoria = [self._json_safe(r) for r in cursor.fetchall()]
+
+            return {
+                "ok": True,
+                "usuarios": usuarios,
+                "asignaciones": asignaciones,
+                "auditoria": auditoria,
+            }
+
+    def crear_cliente_rbac(self, nombre: str, correo: str) -> dict[str, Any]:
+        """Inserta un nuevo cliente comprador (`USUARIO`) en Amazon RDS y registra auditoría."""
+        with self._cursor_session(commit=True, dictionary=True) as cursor:
+            permisos = "Control y Monitoreo de Mis Vehículos Asignados + Editor DEMO Propia (1-4 pasos)"
+            cursor.execute(
+                "INSERT INTO usuarios_iot (nombre, correo, rol, permisos, activo) VALUES (%s, %s, 'USUARIO', %s, 1)",
+                (nombre.strip(), correo.strip(), permisos),
+            )
+            nuevo_id = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO bitacora_auditoria_iot (actor, rol, accion, recurso, resultado) "
+                "VALUES ('ADMIN', 'ADMIN', 'ALTA_CLIENTE_RDS', %s, 'OK · Persistido en usuarios_iot')",
+                (f"Cliente #{nuevo_id} ({nombre.strip()})",),
+            )
+            return {"ok": True, "id_cliente": nuevo_id, "nombre": nombre.strip(), "correo": correo.strip()}
+
+    def asignar_vehiculo_rbac(
+        self,
+        id_vehiculo: int,
+        id_usuario: int,
+        estado_comercial: str,
+        consentimiento_soporte: bool = True,
+    ) -> dict[str, Any]:
+        """Actualiza o crea en Amazon RDS la asignación comercial y propietario de una unidad física."""
+        with self._cursor_session(commit=True, dictionary=True) as cursor:
+            habilitado_exhibicion = 1 if estado_comercial == "Exhibición" else 0
+            cursor.execute(
+                """
+                INSERT INTO asignaciones_vehiculo
+                  (id_vehiculo, id_usuario, estado_comercial, consentimiento_soporte, habilitado_exhibicion)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                  id_usuario = VALUES(id_usuario),
+                  estado_comercial = VALUES(estado_comercial),
+                  consentimiento_soporte = VALUES(consentimiento_soporte),
+                  habilitado_exhibicion = VALUES(habilitado_exhibicion)
+                """,
+                (id_vehiculo, id_usuario, estado_comercial, int(bool(consentimiento_soporte)), habilitado_exhibicion),
+            )
+            cursor.execute("SELECT nombre FROM usuarios_iot WHERE id_usuario = %s", (id_usuario,))
+            row = cursor.fetchone()
+            propietario = row["nombre"] if row else f"Usuario #{id_usuario}"
+            cursor.execute(
+                "INSERT INTO bitacora_auditoria_iot (actor, rol, accion, recurso, resultado) "
+                "VALUES ('ADMIN', 'ADMIN', 'ASIGNACION_PROPIETARIO_RDS', %s, %s)",
+                (f"Unidad #{id_vehiculo}", f"OK · Titular: {propietario} ({estado_comercial})"),
+            )
+            return {
+                "ok": True,
+                "id_vehiculo": id_vehiculo,
+                "id_cliente": id_usuario,
+                "propietario": propietario,
+                "estado_comercial": estado_comercial,
+                "consentimiento_soporte": bool(consentimiento_soporte),
+            }
+
+    def registrar_auditoria_rbac(
+        self, actor: str, rol: str, accion: str, recurso: str, resultado: str
+    ) -> dict[str, Any]:
+        """Persiste en Amazon RDS (`bitacora_auditoria_iot`) un evento de seguridad o acceso."""
+        with self._cursor_session(commit=True, dictionary=True) as cursor:
+            cursor.execute(
+                "INSERT INTO bitacora_auditoria_iot (actor, rol, accion, recurso, resultado) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (actor[:80], rol[:30], accion[:80], recurso[:120], resultado[:160]),
+            )
+            return {"ok": True, "id_auditoria": cursor.lastrowid}
+
