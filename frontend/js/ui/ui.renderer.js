@@ -518,7 +518,7 @@ export class UiRenderer {
       tdCode.appendChild(codeBadge);
 
       const tdOrigin = document.createElement('td');
-      tdOrigin.className = 'text-secondary small font-monospace';
+      tdOrigin.className = 'text-secondary small font-monospace d-none d-md-table-cell';
       tdOrigin.textContent = safeString(item.origen, 'API');
 
       const tdDate = document.createElement('td');
@@ -613,7 +613,7 @@ export class UiRenderer {
           tdModel.textContent = safeString(u.modelo);
 
           const tdMcu = document.createElement('td');
-          tdMcu.className = 'small text-secondary';
+          tdMcu.className = 'small text-secondary d-none d-sm-table-cell';
           tdMcu.textContent = safeString(u.microcontrolador);
 
           const tdStatus = document.createElement('td');
@@ -647,7 +647,7 @@ export class UiRenderer {
         tdName.textContent = m.nombre;
 
         const tdMcu = document.createElement('td');
-        tdMcu.className = 'small text-secondary';
+        tdMcu.className = 'small text-secondary d-none d-sm-table-cell';
         tdMcu.textContent = m.microcontrolador;
 
         const tdCap = document.createElement('td');
@@ -798,7 +798,7 @@ export class UiRenderer {
         tdAction.textContent = log.action;
 
         const tdRes = document.createElement('td');
-        tdRes.className = 'small text-secondary';
+        tdRes.className = 'small text-secondary d-none d-sm-table-cell';
         tdRes.textContent = log.resource;
 
         const tdOut = document.createElement('td');

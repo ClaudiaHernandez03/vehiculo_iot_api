@@ -381,7 +381,25 @@ class ExcavatorControlApp {
       });
     }
 
-    // 6. Eventos de la Vista 4.3 ADMINISTRACIÓN
+    // 6. Eventos de la Vista 4.3 ADMINISTRACIÓN (Sub-pestañas sin deslizar + Roles)
+    document.querySelectorAll('[data-admin-subview]').forEach((subBtn) => {
+      subBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetSub = subBtn.getAttribute('data-admin-subview');
+        document.querySelectorAll('[data-admin-subview]').forEach((b) => {
+          b.classList.toggle('active', b.getAttribute('data-admin-subview') === targetSub);
+        });
+        ['unidades', 'demos', 'exhibicion', 'auditoria'].forEach((subName) => {
+          const el = document.getElementById(`admin-subview-${subName}`);
+          if (el) {
+            const isMatch = subName === targetSub;
+            el.hidden = !isMatch;
+            el.classList.toggle('active-subview', isMatch);
+          }
+        });
+      });
+    });
+
     document.querySelectorAll('[data-role-btn]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const nextRole = btn.getAttribute('data-role-btn');

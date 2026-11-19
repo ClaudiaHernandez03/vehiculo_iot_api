@@ -176,8 +176,8 @@
     <!-- ===================================================================== -->
     <div id="view-control" class="view-section active-view flex-grow-1" role="tabpanel">
       <div class="row g-3 align-items-stretch rc-deck-zone my-auto">
-        <!-- COLUMNA IZQUIERDA: JOYSTICK IZQUIERDO (DESPLAZAMIENTO Y DIRECCIÓN) -->
-        <div class="col-12 col-md-4 col-lg-4 order-1">
+        <!-- COLUMNA IZQUIERDA: JOYSTICK IZQUIERDO (50% en móvil para verse lado a lado sin deslizar) -->
+        <div class="col-6 col-lg-4 order-2 order-lg-1">
           <section class="joy-panel-card h-100 d-flex flex-column justify-content-between" aria-labelledby="heading-joystick-left">
             <div class="joy-panel-header">
               <div class="d-flex align-items-center gap-2">
@@ -283,8 +283,8 @@
           </section>
         </div>
 
-        <!-- COLUMNA CENTRAL: SELECTOR DE VEHÍCULO + EXCAVADORA + DETENER + FUNCIONES -->
-        <div class="col-12 col-md-4 col-lg-4 order-2 d-flex flex-column justify-content-between">
+        <!-- COLUMNA CENTRAL: SELECTOR DE VEHÍCULO + EXCAVADORA + DETENER + FUNCIONES (Arriba en móvil, al centro en escritorio) -->
+        <div class="col-12 col-lg-4 order-1 order-lg-2 d-flex flex-column justify-content-between">
           <section class="center-cockpit-column h-100 d-flex flex-column justify-content-between" aria-label="Consola central del vehículo">
             <!-- Selector Superior de Vehículo -->
             <div class="text-center">
@@ -429,8 +429,8 @@
           </section>
         </div>
 
-        <!-- COLUMNA DERECHA: JOYSTICK DERECHO (BRAZO Y TORRE) -->
-        <div class="col-12 col-md-4 col-lg-4 order-3">
+        <!-- COLUMNA DERECHA: JOYSTICK DERECHO (50% en móvil lado a lado con el izquierdo) -->
+        <div class="col-6 col-lg-4 order-3">
           <section class="joy-panel-card h-100 d-flex flex-column justify-content-between" aria-labelledby="heading-joystick-right">
             <div class="joy-panel-header">
               <div class="d-flex align-items-center gap-2">
@@ -541,129 +541,122 @@
     </div>
 
     <!-- ===================================================================== -->
-    <!-- VENTANA 2 (INDEPENDIENTE): MONITOREO EN TIEMPO REAL (4.2)             -->
+    <!-- VENTANA 2 (INDEPENDIENTE): MONITOREO EN TIEMPO REAL (4.2 — UNA SOLA PANTALLA SIN DESLIZAR) -->
     <!-- ===================================================================== -->
     <div id="view-monitoreo" class="view-section flex-grow-1" role="tabpanel" hidden>
-      <div class="row g-3">
-        <!-- COLUMNA IZQUIERDA: TARJETA DESTACADA DEL ÚLTIMO MOVIMIENTO + EVENTOS WSS EN VIVO -->
-        <div class="col-12 col-lg-5 d-flex flex-column gap-3">
-          <section class="joy-panel-card flex-grow-1 d-flex flex-column" aria-labelledby="heading-last-movement">
-            <div class="control-card-header">
+      <div class="row g-2 h-100 align-items-stretch">
+        <!-- COLUMNA IZQUIERDA: TARJETA COMPACTA DEL ÚLTIMO MOVIMIENTO + WSS -->
+        <div class="col-12 col-lg-5 d-flex flex-column gap-2">
+          <section class="joy-panel-card flex-grow-1 d-flex flex-column justify-content-between" aria-labelledby="heading-last-movement">
+            <div class="control-card-header py-1 mb-1">
               <h2 id="heading-last-movement" class="section-title">
                 <i class="bi bi-radar" aria-hidden="true"></i>
-                Último Movimiento / Estado Reportado
+                Último Movimiento Reportado
               </h2>
               <button
                 type="button"
                 id="btn-refresh-monitoring"
-                class="btn btn-sm btn-purple-outline"
+                class="btn btn-sm btn-purple-outline py-0 px-2"
                 title="Resincronizar estado e historial desde Amazon RDS"
               >
                 <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i>Sincronizar
               </button>
             </div>
 
-            <div class="p-2 d-flex flex-column justify-content-between flex-grow-1">
-              <div class="hero-status-box p-3 rounded-3 mb-3">
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <span class="small text-uppercase text-secondary fw-bold">Movimiento Reportado</span>
-                  <span class="cmd-code-pill" id="mon-last-cmd-code">Código —</span>
+            <div class="hero-status-box p-2 rounded-3 mb-2">
+              <div class="d-flex align-items-center justify-content-between">
+                <div>
+                  <span class="d-block small text-secondary" style="font-size:0.68rem;">MOVIMIENTO / ESTADO</span>
+                  <div class="fs-5 fw-bold text-white" id="mon-last-cmd-name">Sincronizando...</div>
                 </div>
-                <div class="fs-2 fw-bold text-white mb-1" id="mon-last-cmd-name">Sincronizando...</div>
-                <div class="small text-purple-light fw-semibold" id="mon-last-stage-badge">
-                  Verificando persistencia en Amazon RDS...
-                </div>
+                <span class="cmd-code-pill" id="mon-last-cmd-code">Código —</span>
               </div>
+              <div class="small text-purple-light fw-semibold text-truncate mt-1" style="font-size:0.72rem;" id="mon-last-stage-badge">
+                Confirmado en Amazon RDS
+              </div>
+            </div>
 
-              <div class="row g-2">
-                <div class="col-6">
-                  <div class="meta-tile p-2 rounded-2">
-                    <span class="d-block small text-secondary">Vehículo</span>
-                    <strong class="text-white small" id="mon-last-vehicle">Excavadora IoT (ID #1)</strong>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="meta-tile p-2 rounded-2">
-                    <span class="d-block small text-secondary">Origen</span>
-                    <strong class="text-purple-light small font-monospace" id="mon-last-origin">RDS / WSS</strong>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="meta-tile p-2 rounded-2">
-                    <span class="d-block small text-secondary">Fecha</span>
-                    <strong class="text-white font-monospace" id="mon-last-date">--/--/----</strong>
-                  </div>
-                </div>
-                <div class="col-6">
-                  <div class="meta-tile p-2 rounded-2">
-                    <span class="d-block small text-secondary">Hora</span>
-                    <strong class="text-purple-bright font-monospace" id="mon-last-time">--:--:--</strong>
-                  </div>
+            <div class="row g-1">
+              <div class="col-6">
+                <div class="meta-tile px-2 py-1 rounded-2">
+                  <span class="d-block text-secondary" style="font-size:0.65rem;">Vehículo</span>
+                  <strong class="text-white small text-truncate d-block" id="mon-last-vehicle">Excavadora #1</strong>
                 </div>
               </div>
+              <div class="col-6">
+                <div class="meta-tile px-2 py-1 rounded-2">
+                  <span class="d-block text-secondary" style="font-size:0.65rem;">Origen</span>
+                  <strong class="text-purple-light small font-monospace text-truncate d-block" id="mon-last-origin">RDS / WSS</strong>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="meta-tile px-2 py-1 rounded-2">
+                  <span class="d-block text-secondary" style="font-size:0.65rem;">Fecha</span>
+                  <strong class="text-white small font-monospace" id="mon-last-date">--/--/----</strong>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="meta-tile px-2 py-1 rounded-2">
+                  <span class="d-block text-secondary" style="font-size:0.65rem;">Hora</span>
+                  <strong class="text-purple-bright small font-monospace" id="mon-last-time">--:--:--</strong>
+                </div>
+              </div>
+            </div>
 
-              <div class="mt-2 pt-2 border-top border-purple-subtle d-flex align-items-center justify-content-between small text-secondary">
-                <span>Actualización en vivo vía WSS</span>
-                <span class="font-monospace" id="mon-sync-time">--:--:--</span>
-              </div>
+            <div class="mt-1 pt-1 border-top border-purple-subtle d-flex align-items-center justify-content-between text-secondary" style="font-size:0.68rem;">
+              <span>WSS en tiempo real</span>
+              <span class="font-monospace" id="mon-sync-time">--:--:--</span>
             </div>
           </section>
 
-          <!-- Eventos WebSocket Recibidos en Vivo -->
-          <section class="joy-panel-card">
-            <div class="control-card-header">
+          <!-- Eventos WebSocket Recibidos en Vivo (Compacto) -->
+          <section class="joy-panel-card d-none d-lg-block">
+            <div class="control-card-header py-1 mb-1">
               <h3 class="section-title">
                 <i class="bi bi-broadcast" aria-hidden="true"></i>
-                Tramas WebSocket (WSS) en Vivo
+                Tramas WebSocket (WSS)
               </h3>
               <button type="button" id="btn-clear-ws-feed" class="btn btn-sm btn-purple-outline py-0 px-2">
                 Limpiar
               </button>
             </div>
-            <div id="ws-events-feed" class="ws-events-feed" aria-live="polite">
+            <div id="ws-events-feed" class="ws-events-feed" style="max-height:95px;" aria-live="polite">
               <div class="ws-feed-empty text-secondary small">Esperando eventos WSS...</div>
             </div>
           </section>
         </div>
 
-        <!-- COLUMNA DERECHA: TABLA DE LOS 10 MOVIMIENTOS INDIVIDUALES MÁS RECIENTES -->
+        <!-- COLUMNA DERECHA: TABLA DE LOS 10 MOVIMIENTOS INDIVIDUALES (CABE COMPLETA EN 1 PANTALLA) -->
         <div class="col-12 col-lg-7">
-          <section class="joy-panel-card h-100 d-flex flex-column" aria-labelledby="heading-history-table">
-            <div class="control-card-header">
+          <section class="joy-panel-card h-100 d-flex flex-column justify-content-between" aria-labelledby="heading-history-table">
+            <div class="control-card-header py-1 mb-1">
               <h2 id="heading-history-table" class="section-title">
                 <i class="bi bi-table" aria-hidden="true"></i>
-                Últimos 10 Movimientos Individuales (Amazon RDS)
+                Últimos 10 Movimientos (RDS)
               </h2>
-              <span class="badge-chip badge-chip-purple" id="mon-history-count">0 / 10 registros</span>
+              <span class="badge-chip badge-chip-purple" id="mon-history-count">0 / 10</span>
             </div>
 
-            <div class="p-2 flex-grow-1 d-flex flex-column justify-content-between">
-              <div class="table-responsive">
-                <table class="table table-dark-purple align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th scope="col">#</th>
-                      <th scope="col">Movimiento</th>
-                      <th scope="col">Código</th>
-                      <th scope="col">Origen</th>
-                      <th scope="col">Fecha</th>
-                      <th scope="col">Hora</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mon-history-tbody">
-                    <tr>
-                      <td colspan="6" class="text-center text-secondary py-4 small">
-                        Consultando historial persistido en Amazon RDS...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="mt-2 pt-2 border-top border-purple-subtle small text-secondary d-flex flex-wrap justify-content-between gap-2">
-                <span>Ordenados del más reciente al más antiguo (sp_obtener_historial).</span>
-                <span>Los pasos internos de DEMO no contaminan esta tabla.</span>
-              </div>
+            <div class="flex-grow-1 overflow-hidden">
+              <table class="table table-dark-purple table-monitoreo-compact align-middle mb-0 w-100">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Movimiento</th>
+                    <th scope="col">Cód</th>
+                    <th scope="col" class="d-none d-md-table-cell">Origen</th>
+                    <th scope="col">Fecha</th>
+                    <th scope="col">Hora</th>
+                  </tr>
+                </thead>
+                <tbody id="mon-history-tbody">
+                  <tr>
+                    <td colspan="6" class="text-center text-secondary py-3 small">
+                      Consultando historial en Amazon RDS...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </section>
         </div>
@@ -671,194 +664,128 @@
     </div>
 
     <!-- ===================================================================== -->
-    <!-- VENTANA 3 (INDEPENDIENTE): ADMINISTRACIÓN COMERCIAL MULTIUSUARIO (4.3) -->
+    <!-- VENTANA 3 (INDEPENDIENTE): ADMINISTRACIÓN COMERCIAL (4.3 — SUBPESTAÑAS SIN DESLIZAR) -->
     <!-- ===================================================================== -->
     <div id="view-administracion" class="view-section flex-grow-1" role="tabpanel" hidden>
-      <!-- BARRA DE SELECCIÓN DE ROL COMERCIAL (ADMIN · USUARIO COMPRADOR · INVITADO) -->
-      <section class="joy-panel-card p-3 mb-3" aria-label="Selector de rol comercial">
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="small fw-bold text-uppercase text-purple-light me-1">
-              <i class="bi bi-person-badge-fill me-1" aria-hidden="true"></i>Rol Activo:
-            </span>
-            <button type="button" class="btn btn-sm role-pill-btn active" data-role-btn="ADMIN">
-              <i class="bi bi-building-fill-gear me-1" aria-hidden="true"></i>Administrador (Empresa)
+      <!-- BARRA COMPACTA DE ROL + MÉTRICAS + SUB-NAVEGACIÓN DE MÓDULOS -->
+      <section class="joy-panel-card p-2 mb-2" aria-label="Control de roles y módulos administrativos">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <!-- Roles: Admin / Usuario / Invitado -->
+          <div class="d-flex align-items-center gap-1 flex-wrap">
+            <button type="button" class="btn btn-sm role-pill-btn active py-1 px-2" data-role-btn="ADMIN">
+              <i class="bi bi-building-fill-gear me-1" aria-hidden="true"></i>Admin
             </button>
-            <button type="button" class="btn btn-sm role-pill-btn" data-role-btn="USUARIO">
-              <i class="bi bi-person-check-fill me-1" aria-hidden="true"></i>Usuario (Comprador)
+            <button type="button" class="btn btn-sm role-pill-btn py-1 px-2" data-role-btn="USUARIO">
+              <i class="bi bi-person-check-fill me-1" aria-hidden="true"></i>Usuario
             </button>
-            <button type="button" class="btn btn-sm role-pill-btn" data-role-btn="INVITADO">
-              <i class="bi bi-eye-fill me-1" aria-hidden="true"></i>Invitado (Exhibición)
+            <button type="button" class="btn btn-sm role-pill-btn py-1 px-2" data-role-btn="INVITADO">
+              <i class="bi bi-eye-fill me-1" aria-hidden="true"></i>Invitado
             </button>
-          </div>
 
-          <div class="d-flex flex-wrap align-items-center gap-3">
-            <div class="d-flex align-items-center gap-2">
-              <label for="admin-buyer-account-select" class="small text-secondary mb-0">Cuenta Comprador:</label>
-              <select id="admin-buyer-account-select" class="form-select form-select-sm dark-purple-input" style="width: auto;">
-                <option value="101">#101 · Claudia América (Propietaria Unidad #1)</option>
-                <option value="102">#102 · Constructora Centro (Sin Unidad #1)</option>
-              </select>
-            </div>
+            <select id="admin-buyer-account-select" class="form-select form-select-sm dark-purple-input py-0 px-2" style="width:auto;height:28px;font-size:0.72rem;">
+              <option value="101">#101 · Claudia A. (Unidad #1)</option>
+              <option value="102">#102 · Constructora B</option>
+            </select>
 
-            <div class="form-check form-switch mb-0">
+            <div class="form-check form-switch mb-0 ms-1">
               <input class="form-check-input" type="checkbox" id="admin-support-consent-switch" checked />
-              <label class="form-check-label small text-light" for="admin-support-consent-switch">
-                Autorización Soporte Técnico
+              <label class="form-check-label text-light" style="font-size:0.7rem;" for="admin-support-consent-switch">
+                Soporte
               </label>
             </div>
           </div>
+
+          <!-- Tira compacta de 6 métricas del Dashboard -->
+          <div class="d-flex align-items-center gap-1 flex-wrap">
+            <span class="badge-chip">Mod: <strong class="text-purple-bright ms-1" id="metric-models">2</strong></span>
+            <span class="badge-chip">Unid: <strong class="text-white ms-1" id="metric-units">1</strong></span>
+            <span class="badge-chip">Vend: <strong class="text-purple-light ms-1" id="metric-assigned">1</strong></span>
+            <span class="badge-chip">Exhib: <strong class="text-purple-bright ms-1" id="metric-exhibition">1</strong></span>
+            <span class="badge-chip">Cli: <strong class="text-white ms-1" id="metric-clients">2</strong></span>
+            <span class="badge-chip">Demos: <strong class="text-purple-light ms-1" id="metric-demos">3</strong></span>
+          </div>
         </div>
-        <div class="small text-secondary mt-2" id="admin-role-context-text">
-          Vista Empresa Comercializadora: Gestión de inventario de unidades, modelos, clientes, asignaciones y editor de DEMOs.
+
+        <span class="visually-hidden" id="admin-role-context-text">Gestión administrativa</span>
+
+        <!-- Sub-pestañas internas de Administración para no deslizar en teléfono -->
+        <div class="admin-subtabs-grid mt-2" role="tablist">
+          <button type="button" class="admin-subtab-btn active" data-admin-subview="unidades">
+            <i class="bi bi-truck-flatbed me-1"></i>Unidades
+          </button>
+          <button type="button" class="admin-subtab-btn" data-admin-subview="demos">
+            <i class="bi bi-list-ol me-1"></i>Editor DEMO
+          </button>
+          <button type="button" class="admin-subtab-btn" data-admin-subview="exhibicion">
+            <i class="bi bi-hourglass-split me-1"></i>Exhibición 60s
+          </button>
+          <button type="button" class="admin-subtab-btn" data-admin-subview="auditoria">
+            <i class="bi bi-shield-check me-1"></i>Auditoría
+          </button>
         </div>
       </section>
 
-      <!-- DASHBOARD DE MÉTRICAS COMERCIALES -->
-      <div class="row g-2 mb-3">
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">Modelos</span>
-            <strong class="fs-4 text-purple-bright" id="metric-models">2</strong>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">Unidades RDS</span>
-            <strong class="fs-4 text-white" id="metric-units">1</strong>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">Vendidas / Asignadas</span>
-            <strong class="fs-4 text-purple-light" id="metric-assigned">1</strong>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">En Exhibición</span>
-            <strong class="fs-4 text-purple-bright" id="metric-exhibition">1</strong>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">Compradores</span>
-            <strong class="fs-4 text-white" id="metric-clients">2</strong>
-          </div>
-        </div>
-        <div class="col-6 col-md-4 col-lg-2">
-          <div class="metric-card p-2 rounded-3 text-center">
-            <span class="d-block small text-secondary">Rutinas DEMO</span>
-            <strong class="fs-4 text-purple-light" id="metric-demos">3</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="row g-3">
-        <!-- COLUMNA 1: INVENTARIO DE UNIDADES / MIS VEHÍCULOS + MODELOS -->
-        <div class="col-12 col-lg-5">
-          <section class="joy-panel-card h-100 d-flex flex-column">
-            <div class="control-card-header">
-              <h2 class="section-title" id="admin-units-section-title">
-                <i class="bi bi-truck-flatbed" aria-hidden="true"></i>
-                Unidades Físicas en Inventario (Amazon RDS)
-              </h2>
-              <span class="badge-chip">sp_obtener_vehiculos</span>
-            </div>
-
-            <div class="p-2 d-flex flex-column justify-content-between flex-grow-1 gap-3">
-              <div class="table-responsive">
-                <table class="table table-dark-purple table-sm align-middle mb-0">
+      <!-- SUB-VISTA 1: UNIDADES, MODELOS Y ASIGNACIÓN DE PROPIETARIOS -->
+      <div id="admin-subview-unidades" class="admin-subview active-subview flex-grow-1">
+        <div class="row g-2 h-100">
+          <div class="col-12 col-lg-7">
+            <section class="joy-panel-card h-100 d-flex flex-column justify-content-between">
+              <div>
+                <div class="control-card-header py-1 mb-1">
+                  <h2 class="section-title" id="admin-units-section-title">
+                    <i class="bi bi-truck-flatbed" aria-hidden="true"></i>
+                    Unidades Físicas (Amazon RDS)
+                  </h2>
+                  <span class="badge-chip">sp_obtener_vehiculos</span>
+                </div>
+                <table class="table table-dark-purple table-monitoreo-compact align-middle mb-2 w-100">
                   <thead>
                     <tr>
                       <th>ID</th>
                       <th>Unidad</th>
                       <th>Modelo</th>
-                      <th>MCU</th>
+                      <th class="d-none d-sm-table-cell">MCU</th>
                       <th>Estado</th>
                       <th>Titular</th>
                     </tr>
                   </thead>
-                  <tbody id="admin-units-tbody">
-                    <tr>
-                      <td colspan="6" class="text-center text-secondary py-2 small">Cargando unidades...</td>
-                    </tr>
-                  </tbody>
+                  <tbody id="admin-units-tbody"></tbody>
                 </table>
               </div>
 
               <div data-admin-only="true" class="p-2 rounded-3 demo-box">
-                <div class="small fw-bold text-purple-light text-uppercase mb-2">
-                  <i class="bi bi-plus-circle-fill me-1" aria-hidden="true"></i>Registrar Nueva Unidad en RDS
-                </div>
-                <form id="form-admin-new-unit" class="row g-2">
-                  <div class="col-6">
-                    <input type="text" id="new-unit-name" class="form-control form-control-sm dark-purple-input" placeholder="Nombre (ej. Excavadora #2)" required />
+                <form id="form-admin-new-unit" class="row g-1">
+                  <div class="col-5">
+                    <input type="text" id="new-unit-name" class="form-control form-control-sm dark-purple-input" placeholder="Nueva unidad..." required />
                   </div>
                   <div class="col-3">
                     <input type="text" id="new-unit-model" class="form-control form-control-sm dark-purple-input" value="CAT-320" required />
                   </div>
-                  <div class="col-3">
-                    <input type="text" id="new-unit-mcu" class="form-control form-control-sm dark-purple-input" value="ESP8266" required />
-                  </div>
-                  <div class="col-5">
-                    <input type="text" id="new-unit-desc" class="form-control form-control-sm dark-purple-input" placeholder="Descripción" value="Unidad IoT 12 movimientos" />
-                  </div>
                   <div class="col-4">
                     <select id="new-unit-client" class="form-select form-select-sm dark-purple-input"></select>
                   </div>
-                  <div class="col-3">
+                  <input type="hidden" id="new-unit-mcu" value="ESP8266" />
+                  <input type="hidden" id="new-unit-desc" value="Unidad IoT 12 movimientos" />
+                  <div class="col-5">
                     <select id="new-unit-status" class="form-select form-select-sm dark-purple-input">
                       <option value="Disponible">Disponible</option>
                       <option value="Vendido / Asignado">Vendido</option>
                       <option value="Exhibición">Exhibición</option>
                     </select>
                   </div>
-                  <div class="col-12">
-                    <button type="submit" class="btn btn-sm btn-purple-primary w-100 fw-bold">
-                      Guardar Unidad en Amazon RDS
-                    </button>
+                  <div class="col-7">
+                    <button type="submit" class="btn btn-sm btn-purple-primary w-100 fw-bold">+ Registrar Unidad RDS</button>
                   </div>
                 </form>
               </div>
+            </section>
+          </div>
 
-              <div>
-                <div class="small fw-bold text-secondary text-uppercase mb-1">Catálogo de Modelos Comerciales</div>
-                <div class="table-responsive">
-                  <table class="table table-dark-purple table-sm align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th>Modelo</th>
-                        <th>Nombre Comercial</th>
-                        <th>Hardware</th>
-                        <th>Capacidades</th>
-                      </tr>
-                    </thead>
-                    <tbody id="admin-models-tbody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <!-- COLUMNA 2: CLIENTES, ASIGNACIONES Y EDITOR VISUAL DE DEMOS -->
-        <div class="col-12 col-lg-4">
-          <section class="joy-panel-card h-100 d-flex flex-column">
-            <div class="control-card-header">
-              <h2 class="section-title">
-                <i class="bi bi-sliders" aria-hidden="true"></i>
-                Clientes y Editor Visual de DEMOs
-              </h2>
-              <span class="badge-chip badge-chip-purple">RDS Persistente</span>
-            </div>
-
-            <div class="p-2 d-flex flex-column justify-content-between flex-grow-1 gap-3">
-              <div data-admin-only="true" class="p-2 rounded-3 demo-box">
-                <div class="small fw-bold text-purple-light text-uppercase mb-2">
-                  <i class="bi bi-people-fill me-1" aria-hidden="true"></i>Asignación Comercial de Propietario
-                </div>
-                <form id="form-admin-assign-unit" class="row g-2 mb-2">
+          <div class="col-12 col-lg-5">
+            <section class="joy-panel-card h-100 d-flex flex-column justify-content-between">
+              <div data-admin-only="true" class="p-2 rounded-3 demo-box mb-2">
+                <div class="small fw-bold text-purple-light text-uppercase mb-1">Asignar Propietario / Cliente</div>
+                <form id="form-admin-assign-unit" class="row g-1 mb-1">
                   <div class="col-5">
                     <select id="assign-unit-select" class="form-select form-select-sm dark-purple-input"></select>
                   </div>
@@ -873,18 +800,15 @@
                     </select>
                   </div>
                   <div class="col-12">
-                    <button type="submit" class="btn btn-sm btn-purple-outline w-100 fw-bold">
-                      Asignar Titular y Revocar Anterior
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-purple-outline w-100 fw-bold">Asignar Titular</button>
                   </div>
                 </form>
-
-                <form id="form-admin-new-client" class="row g-2">
+                <form id="form-admin-new-client" class="row g-1">
                   <div class="col-5">
-                    <input type="text" id="new-client-name" class="form-control form-control-sm dark-purple-input" placeholder="Nuevo cliente comprador" required />
+                    <input type="text" id="new-client-name" class="form-control form-control-sm dark-purple-input" placeholder="Nuevo comprador" required />
                   </div>
                   <div class="col-4">
-                    <input type="email" id="new-client-email" class="form-control form-control-sm dark-purple-input" placeholder="correo@cliente.mx" />
+                    <input type="email" id="new-client-email" class="form-control form-control-sm dark-purple-input" placeholder="correo@iot.mx" />
                   </div>
                   <div class="col-3">
                     <button type="submit" class="btn btn-sm btn-purple-primary w-100 fw-bold">+ Cliente</button>
@@ -892,139 +816,170 @@
                 </form>
               </div>
 
-              <div class="p-2 rounded-3 demo-box flex-grow-1 d-flex flex-column justify-content-between">
-                <div>
-                  <div class="d-flex align-items-center justify-content-between mb-2">
-                    <span class="small fw-bold text-purple-light text-uppercase">
-                      <i class="bi bi-list-ol me-1" aria-hidden="true"></i>Editor Visual de DEMO (1–4 pasos)
-                    </span>
-                    <span class="badge-chip">Amazon RDS</span>
-                  </div>
-
-                  <select id="admin-demo-select" class="form-select form-select-sm dark-purple-input mb-2"></select>
-
-                  <div class="table-responsive mb-2">
-                    <table class="table table-dark-purple table-sm align-middle mb-0">
-                      <thead>
-                        <tr>
-                          <th>Orden</th>
-                          <th>Movimiento</th>
-                          <th>Duración</th>
-                          <th class="text-end">Acción</th>
-                        </tr>
-                      </thead>
-                      <tbody id="admin-demo-steps-tbody"></tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div>
-                  <form id="form-admin-add-demo-step" class="row g-2 mb-2">
-                    <div class="col-5">
-                      <select id="admin-step-cmd-select" class="form-select form-select-sm dark-purple-input"></select>
-                    </div>
-                    <div class="col-2">
-                      <select id="admin-step-order" class="form-select form-select-sm dark-purple-input" title="Orden (1 a 4)">
-                        <option value="1">#1</option>
-                        <option value="2">#2</option>
-                        <option value="3">#3</option>
-                        <option value="4">#4</option>
-                      </select>
-                    </div>
-                    <div class="col-3">
-                      <input type="number" id="admin-step-duration" class="form-control form-control-sm dark-purple-input" value="1500" min="300" max="10000" step="100" title="Duración ms" />
-                    </div>
-                    <div class="col-2">
-                      <input type="hidden" id="admin-step-pause" value="500" />
-                      <button type="submit" class="btn btn-sm btn-purple-primary w-100 fw-bold" title="Agregar paso">+</button>
-                    </div>
-                  </form>
-
-                  <form id="form-admin-new-demo" class="row g-2 pt-2 border-top border-purple-subtle">
-                    <div class="col-5">
-                      <input type="text" id="new-demo-name" class="form-control form-control-sm dark-purple-input" placeholder="Nueva DEMO..." required />
-                    </div>
-                    <div class="col-4">
-                      <input type="text" id="new-demo-desc" class="form-control form-control-sm dark-purple-input" placeholder="Descripción" value="Secuencia personalizada" />
-                    </div>
-                    <div class="col-3">
-                      <button type="submit" class="btn btn-sm btn-purple-outline w-100 fw-bold">Crear</button>
-                    </div>
-                  </form>
-                </div>
+              <div>
+                <div class="small fw-bold text-secondary text-uppercase mb-1">Modelos Comerciales</div>
+                <table class="table table-dark-purple table-monitoreo-compact align-middle mb-0 w-100">
+                  <thead>
+                    <tr>
+                      <th>Modelo</th>
+                      <th>Nombre</th>
+                      <th class="d-none d-sm-table-cell">MCU</th>
+                      <th>Capacidades</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-models-tbody"></tbody>
+                </table>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
+      </div>
 
-        <!-- COLUMNA 3: EXHIBICIÓN TEMPORAL PARA INVITADOS + SEGURIDAD Y AUDITORÍA -->
-        <div class="col-12 col-lg-3">
-          <section class="joy-panel-card h-100 d-flex flex-column">
-            <div class="control-card-header">
+      <!-- SUB-VISTA 2: EDITOR VISUAL DE SECUENCIAS DEMO EN AMAZON RDS -->
+      <div id="admin-subview-demos" class="admin-subview flex-grow-1" hidden>
+        <section class="joy-panel-card h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="control-card-header py-1 mb-2">
               <h2 class="section-title">
-                <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-                Exhibición y Auditoría
+                <i class="bi bi-list-ol" aria-hidden="true"></i>
+                Editor Visual de DEMO Persistente en RDS (1 a 4 pasos)
               </h2>
-              <span class="conn-badge badge-neutral" id="guest-session-badge">DISPONIBLE</span>
+              <span class="badge-chip badge-chip-purple">Amazon RDS</span>
             </div>
 
-            <div class="p-2 d-flex flex-column justify-content-between flex-grow-1 gap-3">
-              <div class="p-3 rounded-3 hero-status-box text-center">
-                <div class="small text-uppercase text-secondary fw-bold mb-1">
-                  Prueba Temporal de Exhibición (Invitado)
+            <select id="admin-demo-select" class="form-select form-select-sm dark-purple-input mb-2"></select>
+
+            <table class="table table-dark-purple table-monitoreo-compact align-middle mb-2 w-100">
+              <thead>
+                <tr>
+                  <th>Orden</th>
+                  <th>Movimiento</th>
+                  <th>Duración</th>
+                  <th class="text-end">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="admin-demo-steps-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="row g-2">
+            <div class="col-12 col-md-7">
+              <form id="form-admin-add-demo-step" class="row g-1">
+                <div class="col-5">
+                  <select id="admin-step-cmd-select" class="form-select form-select-sm dark-purple-input"></select>
                 </div>
-                <div class="display-6 fw-bold text-purple-bright font-monospace mb-2" id="guest-timer-display">
-                  00:00
+                <div class="col-2">
+                  <select id="admin-step-order" class="form-select form-select-sm dark-purple-input">
+                    <option value="1">#1</option>
+                    <option value="2">#2</option>
+                    <option value="3">#3</option>
+                    <option value="4">#4</option>
+                  </select>
                 </div>
+                <div class="col-3">
+                  <input type="number" id="admin-step-duration" class="form-control form-control-sm dark-purple-input" value="1500" min="300" max="10000" step="100" />
+                </div>
+                <div class="col-2">
+                  <input type="hidden" id="admin-step-pause" value="500" />
+                  <button type="submit" class="btn btn-sm btn-purple-primary w-100 fw-bold">+ Paso</button>
+                </div>
+              </form>
+            </div>
+
+            <div class="col-12 col-md-5">
+              <form id="form-admin-new-demo" class="row g-1">
+                <div class="col-5">
+                  <input type="text" id="new-demo-name" class="form-control form-control-sm dark-purple-input" placeholder="Nueva DEMO..." required />
+                </div>
+                <div class="col-4">
+                  <input type="text" id="new-demo-desc" class="form-control form-control-sm dark-purple-input" value="Secuencia IoT" />
+                </div>
+                <div class="col-3">
+                  <button type="submit" class="btn btn-sm btn-purple-outline w-100 fw-bold">Crear</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- SUB-VISTA 3: PRUEBA TEMPORAL DE EXHIBICIÓN (INVITADO 60S) Y PRUEBAS DE SEGURIDAD -->
+      <div id="admin-subview-exhibicion" class="admin-subview flex-grow-1" hidden>
+        <div class="row g-2 h-100">
+          <div class="col-12 col-md-6">
+            <section class="joy-panel-card h-100 d-flex flex-column justify-content-between text-center">
+              <div class="control-card-header py-1 mb-1">
+                <h2 class="section-title">
+                  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                  Sesión Temporal Invitado (60s)
+                </h2>
+                <span class="conn-badge badge-neutral" id="guest-session-badge">DISPONIBLE</span>
+              </div>
+
+              <div class="hero-status-box p-3 rounded-3 my-auto">
+                <div class="small text-secondary text-uppercase fw-bold mb-1">Tiempo Restante de Reserva Exclusiva</div>
+                <div class="display-5 fw-bold text-purple-bright font-monospace mb-2" id="guest-timer-display">00:00</div>
                 <div class="d-flex gap-2">
-                  <button type="button" id="btn-start-guest-session" class="btn btn-sm btn-purple-primary fw-bold flex-grow-1">
+                  <button type="button" id="btn-start-guest-session" class="btn btn-purple-primary fw-bold flex-grow-1">
                     Iniciar Prueba (60s)
                   </button>
-                  <button type="button" id="btn-end-guest-session" class="btn btn-sm btn-outline-danger fw-bold" disabled>
+                  <button type="button" id="btn-end-guest-session" class="btn btn-outline-danger fw-bold" disabled>
                     Finalizar
                   </button>
                 </div>
               </div>
+            </section>
+          </div>
 
-              <div class="p-2 rounded-3 demo-box">
-                <div class="small fw-bold text-purple-light text-uppercase mb-2">
-                  <i class="bi bi-shield-shaded me-1" aria-hidden="true"></i>Pruebas de Autorización (401/403/409)
-                </div>
-                <div class="d-grid gap-1">
-                  <button type="button" class="btn btn-sm btn-purple-outline text-start" data-sec-test="INVITADO_ADMIN">
-                    P12 · Rechazo Admin a Invitado (403)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-purple-outline text-start" data-sec-test="USUARIO_AJENO">
-                    P13 · Rechazo Vehículo Ajeno BOLA (403)
-                  </button>
-                  <button type="button" class="btn btn-sm btn-purple-outline text-start" data-sec-test="SESION_DUPLICADA">
-                    P14 · Reserva Exclusiva Unidad (409)
-                  </button>
-                </div>
+          <div class="col-12 col-md-6">
+            <section class="joy-panel-card h-100 d-flex flex-column justify-content-between">
+              <div class="control-card-header py-1 mb-1">
+                <h2 class="section-title">
+                  <i class="bi bi-shield-shaded" aria-hidden="true"></i>
+                  Verificación RBAC / BOLA (401 · 403 · 409)
+                </h2>
               </div>
-
-              <div class="flex-grow-1 d-flex flex-column">
-                <div class="small fw-bold text-secondary text-uppercase mb-1">
-                  <i class="bi bi-journal-code text-purple-bright me-1" aria-hidden="true"></i>Bitácora de Auditoría
-                </div>
-                <div class="table-responsive audit-scroll-box flex-grow-1">
-                  <table class="table table-dark-purple table-sm align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th>Hora</th>
-                        <th>Actor</th>
-                        <th>Acción</th>
-                        <th>Objeto</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody id="admin-audit-tbody"></tbody>
-                  </table>
-                </div>
+              <div class="d-grid gap-2 my-auto">
+                <button type="button" class="btn btn-sm btn-purple-outline text-start py-2" data-sec-test="INVITADO_ADMIN">
+                  <strong>P12 · Rechazo Admin a Invitado (403 Forbidden)</strong>
+                </button>
+                <button type="button" class="btn btn-sm btn-purple-outline text-start py-2" data-sec-test="USUARIO_AJENO">
+                  <strong>P13 · Rechazo Vehículo Ajeno BOLA/IDOR (403 Forbidden)</strong>
+                </button>
+                <button type="button" class="btn btn-sm btn-purple-outline text-start py-2" data-sec-test="SESION_DUPLICADA">
+                  <strong>P14 · Reserva Exclusiva de Unidad (409 Conflict)</strong>
+                </button>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
         </div>
+      </div>
+
+      <!-- SUB-VISTA 4: BITÁCORA DE AUDITORÍA -->
+      <div id="admin-subview-auditoria" class="admin-subview flex-grow-1" hidden>
+        <section class="joy-panel-card h-100 d-flex flex-column">
+          <div class="control-card-header py-1 mb-1">
+            <h2 class="section-title">
+              <i class="bi bi-journal-code" aria-hidden="true"></i>
+              Bitácora de Auditoría de Operaciones y Seguridad
+            </h2>
+            <span class="badge-chip">Sin secretos expuestos</span>
+          </div>
+          <div class="flex-grow-1 overflow-hidden">
+            <table class="table table-dark-purple table-monitoreo-compact align-middle mb-0 w-100">
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Actor</th>
+                  <th>Acción</th>
+                  <th class="d-none d-sm-table-cell">Objeto</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody id="admin-audit-tbody"></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </div>
 

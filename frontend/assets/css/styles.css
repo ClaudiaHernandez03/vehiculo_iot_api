@@ -42,11 +42,12 @@ main,
 
 html,
 body {
-  min-height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
   background-color: var(--bg-obsidian);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden !important;
   -webkit-font-smoothing: antialiased;
   -webkit-touch-callout: none;
   user-select: none;
@@ -80,13 +81,49 @@ body {
 
 /* Control estricto de las 3 ventanas independientes (jamás se apilan una debajo de otra) */
 .view-section,
-.view-section[hidden] {
+.view-section[hidden],
+.admin-subview,
+.admin-subview[hidden] {
   display: none !important;
 }
 
-.view-section.active-view {
+.view-section.active-view,
+.admin-subview.active-subview {
   display: flex !important;
   flex-direction: column;
+  min-height: 0;
+}
+
+.admin-subtabs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+
+.admin-subtab-btn {
+  background: var(--bg-panel-deep);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: var(--text-secondary);
+  border-radius: 0.45rem;
+  padding: 0.28rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-subtab-btn.active {
+  background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-electric) 100%);
+  color: #ffffff;
+  border-color: var(--purple-bright);
+}
+
+.table-monitoreo-compact th,
+.table-monitoreo-compact td {
+  padding: 0.22rem 0.4rem !important;
+  font-size: 0.74rem;
 }
 
 /* ==========================================================================
@@ -1040,80 +1077,154 @@ body {
   overflow-y: auto;
 }
 
-/* Ajustes responsivos completos para teléfonos móviles (Vertical y Horizontal) y Tabletas */
-@media (max-width: 767.98px) {
+/* Ajustes responsivos completos de 1 sola pantalla sin deslizar en teléfonos móviles */
+@media (max-width: 991.98px) {
+  .cat-topbar {
+    padding: 0.25rem 0;
+  }
+  .cat-main-title {
+    font-size: 0.88rem;
+  }
+  .cat-subtitle {
+    font-size: 0.68rem;
+  }
   .status-capsule {
-    padding: 0.25rem 0.55rem;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    padding: 0.18rem 0.45rem;
+    gap: 0.3rem;
   }
   .status-name {
     display: none;
   }
+  .btn-signal-wave {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  .cat-tabs-bar {
+    padding: 0.25rem 0 !important;
+  }
   .cat-tabs-grid-3 {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.35rem;
+    gap: 0.3rem;
   }
   .cat-tab-pill {
-    min-height: 44px;
-    font-size: 0.78rem;
-    padding: 0.3rem 0.4rem;
-  }
-  .joystick-base {
-    width: 196px;
-    height: 196px;
-  }
-  .joystick-stick {
-    width: 66px;
-    height: 66px;
-  }
-  .func-tile {
-    min-height: 62px;
+    min-height: 34px;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.35rem;
   }
   .joy-panel-card {
-    padding: 0.75rem 0.85rem;
+    padding: 0.45rem 0.55rem;
+    border-radius: 0.75rem;
   }
-  .table-dark-purple {
-    font-size: 0.75rem;
+  .joy-panel-header {
+    padding-bottom: 0.2rem;
   }
-  .table-dark-purple th,
-  .table-dark-purple td {
-    padding: 0.35rem 0.4rem;
-    white-space: nowrap;
+  .joy-panel-title {
+    font-size: 0.72rem;
   }
-  #admin-buyer-account-select {
-    max-width: 100% !important;
-    width: 100% !important;
+  .joy-panel-subtitle,
+  .joy-header-svg {
+    display: none;
   }
-  .role-pill-btn {
-    min-height: 40px;
-    flex: 1 1 auto;
+  .joy-state-tag {
+    font-size: 0.58rem;
+    padding: 0.08rem 0.32rem;
   }
-}
-
-/* Modo horizontal (Landscape) en teléfonos móviles: mantiene las 3 columnas tipo control físico */
-@media (max-height: 540px) and (orientation: landscape) {
-  .rc-deck-zone > .col-12 {
-    width: 33.333333%;
-    flex: 0 0 auto;
+  .joystick-arena {
+    padding: 0.15rem;
   }
   .joystick-base {
-    width: 165px;
-    height: 165px;
+    width: 136px;
+    height: 136px;
   }
   .joystick-stick {
-    width: 56px;
-    height: 56px;
+    width: 46px;
+    height: 46px;
+  }
+  .joy-dir-indicator svg {
+    width: 24px;
+    height: 22px;
+  }
+  .joy-dir-up {
+    top: 4px;
+  }
+  .joy-dir-down {
+    bottom: 4px;
+  }
+  .joy-dir-left {
+    left: 5px;
+  }
+  .joy-dir-right {
+    right: 5px;
+  }
+  .vehicle-selector-caption {
+    display: none;
+  }
+  .veh-picker-pill {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  .veh-arrow-btn {
+    width: 26px;
+    height: 26px;
   }
   .excavator-hero-img {
-    max-height: 75px;
+    max-width: 185px;
+    max-height: 68px;
+  }
+  .stop-hazard-housing {
+    padding: 0.25rem 0.35rem;
+  }
+  .hazard-stripes {
+    height: 22px;
   }
   .btn-stop-priority {
-    min-height: 44px;
-    font-size: 0.95rem;
+    min-height: 38px;
+    font-size: 0.92rem;
+  }
+  .functions-divider {
+    margin-bottom: 0.25rem;
+    font-size: 0.65rem;
+  }
+  .functions-grid {
+    gap: 0.35rem;
   }
   .func-tile {
-    min-height: 52px;
+    min-height: 46px;
+    padding: 0.25rem 0.15rem;
+    border-radius: 0.55rem;
+  }
+  .func-tile-icon {
+    font-size: 1.05rem;
+  }
+  .func-tile-label {
+    font-size: 0.66rem;
+  }
+  .inline-demo-drawer {
+    margin-top: 0.3rem !important;
+    padding: 0.3rem !important;
+  }
+  .cat-bottom-frame {
+    padding: 0.25rem 0.55rem;
+  }
+  .bottom-excavator-icon {
+    display: none;
+  }
+  .bottom-label {
+    font-size: 0.68rem;
+  }
+  .bottom-online-pill,
+  .bottom-cmd-pill {
+    font-size: 0.66rem;
+    padding: 0.1rem 0.45rem;
+  }
+  .standalone-credits-footer {
+    padding: 0.28rem 0.5rem;
+    font-size: 0.66rem;
+  }
+  .table-monitoreo-compact th,
+  .table-monitoreo-compact td {
+    padding: 0.16rem 0.28rem !important;
+    font-size: 0.68rem;
   }
 }
