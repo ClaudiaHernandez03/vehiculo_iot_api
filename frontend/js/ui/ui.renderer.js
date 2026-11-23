@@ -113,8 +113,13 @@ export class UiRenderer {
       const isTarget = v === viewName;
 
       if (panel) {
-        panel.hidden = !isTarget;
-        panel.classList.toggle('active-view', isTarget);
+        if (isTarget) {
+          panel.removeAttribute('hidden');
+          panel.classList.add('active-view');
+        } else {
+          panel.setAttribute('hidden', '');
+          panel.classList.remove('active-view');
+        }
       }
       if (tabBtn) {
         tabBtn.classList.toggle('active', isTarget);
@@ -210,11 +215,28 @@ export class UiRenderer {
 
   syncButtonsWithCatalog(commands = []) {
     const activeByCode = new Map();
-    for (const cmd of commands) {
-      if (Number(cmd?.activo) !== 0 && Number.isInteger(Number(cmd?.codigo))) {
-        activeByCode.set(Number(cmd.codigo), cmd);
+    if (Array.isArray(commands)) {
+      for (const cmd of commands) {
+        if (Number(cmd?.activo) !== 0 && Number.isInteger(Number(cmd?.codigo))) {
+          activeByCode.set(Number(cmd.codigo), cmd);
+        }
       }
     }
+
+    const defaultNames = {
+      1: 'Mover brazo arriba',
+      2: 'Girar izquierda',
+      3: 'Mover brazo abajo',
+      4: 'Girar derecha',
+      5: 'Velocidad',
+      6: 'Sonido',
+      7: 'Demo',
+      8: 'Luz',
+      9: 'Avanzar',
+      10: 'Girar torre izquierda',
+      11: 'Retroceder',
+      12: 'Girar torre derecha'
+    };
 
     const commandButtons = document.querySelectorAll('.manual-cmd-btn[data-command-code]');
     commandButtons.forEach((btn) => {
@@ -222,17 +244,17 @@ export class UiRenderer {
       const catalogItem = activeByCode.get(code);
       const titleEl = btn.querySelector('.cmd-btn-label');
 
+      btn.disabled = false;
+      btn.setAttribute('data-state', 'normal');
+
       if (catalogItem) {
-        btn.disabled = false;
-        btn.setAttribute('data-state', 'normal');
         btn.setAttribute('title', `${catalogItem.nombre}: ${catalogItem.descripcion || ''}`);
         if (titleEl && !btn.hasAttribute('data-short-label')) {
           titleEl.textContent = catalogItem.nombre;
         }
       } else {
-        btn.disabled = true;
-        btn.setAttribute('data-state', 'deshabilitado');
-        btn.setAttribute('title', `Código ${code} no disponible en el catálogo actual`);
+        const fallbackTitle = defaultNames[code] || `Comando #${code}`;
+        btn.setAttribute('title', fallbackTitle);
       }
     });
   }

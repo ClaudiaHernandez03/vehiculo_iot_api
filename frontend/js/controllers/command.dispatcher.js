@@ -52,7 +52,20 @@ export class CommandDispatcher {
     this.authorizeCommand = authorizeCommand;
 
     /** @type {Map<number, {id_comando: number, codigo: number, nombre: string, descripcion: string, activo: number}>} */
-    this.catalogByCode = new Map();
+    this.catalogByCode = new Map([
+      [1,  { id_comando: 1,  codigo: 1,  nombre: 'Mover brazo arriba',    descripcion: 'Subir brazo', activo: 1 }],
+      [2,  { id_comando: 2,  codigo: 2,  nombre: 'Girar izquierda',       descripcion: 'Oruga izquierda', activo: 1 }],
+      [3,  { id_comando: 3,  codigo: 3,  nombre: 'Mover brazo abajo',     descripcion: 'Bajar brazo', activo: 1 }],
+      [4,  { id_comando: 4,  codigo: 4,  nombre: 'Girar derecha',         descripcion: 'Oruga derecha', activo: 1 }],
+      [5,  { id_comando: 5,  codigo: 5,  nombre: 'Velocidad',             descripcion: 'Cambiar velocidad', activo: 1 }],
+      [6,  { id_comando: 6,  codigo: 6,  nombre: 'Sonido',                descripcion: 'Encender/apagar sonido', activo: 1 }],
+      [7,  { id_comando: 7,  codigo: 7,  nombre: 'Demo',                  descripcion: 'Modo demostración', activo: 1 }],
+      [8,  { id_comando: 8,  codigo: 8,  nombre: 'Luz',                   descripcion: 'Encender/apagar luces', activo: 1 }],
+      [9,  { id_comando: 9,  codigo: 9,  nombre: 'Avanzar',               descripcion: 'Desplazar adelante', activo: 1 }],
+      [10, { id_comando: 10, codigo: 10, nombre: 'Girar torre izquierda', descripcion: 'Torre izquierda', activo: 1 }],
+      [11, { id_comando: 11, codigo: 11, nombre: 'Retroceder',            descripcion: 'Desplazar atrás', activo: 1 }],
+      [12, { id_comando: 12, codigo: 12, nombre: 'Girar torre derecha',   descripcion: 'Torre derecha', activo: 1 }]
+    ]);
 
     this.activeAbortController = null;
     this.inFlightCode = null;
@@ -70,8 +83,10 @@ export class CommandDispatcher {
    * @param {Array<object>} commands Lista de comandos de RDS
    */
   setCatalog(commands = []) {
+    if (!Array.isArray(commands) || commands.length === 0) {
+      return; // Conservar los 12 comandos predeterminados de la excavadora si el catálogo de red no ha cargado
+    }
     this.catalogByCode.clear();
-    if (!Array.isArray(commands)) return;
 
     for (const item of commands) {
       const code = toPositiveInteger(item?.codigo);
@@ -96,7 +111,32 @@ export class CommandDispatcher {
   getValidCommand(code) {
     const validCode = toPositiveInteger(code);
     if (!validCode) return null;
-    return this.catalogByCode.get(validCode) || null;
+    let found = this.catalogByCode.get(validCode);
+    if (!found && validCode >= 1 && validCode <= 12) {
+      const fallbackNames = {
+        1: 'Mover brazo arriba',
+        2: 'Girar izquierda',
+        3: 'Mover brazo abajo',
+        4: 'Girar derecha',
+        5: 'Velocidad',
+        6: 'Sonido',
+        7: 'Demo',
+        8: 'Luz',
+        9: 'Avanzar',
+        10: 'Girar torre izquierda',
+        11: 'Retroceder',
+        12: 'Girar torre derecha'
+      };
+      found = {
+        id_comando: validCode,
+        codigo: validCode,
+        nombre: fallbackNames[validCode] || `Comando ${validCode}`,
+        descripcion: 'Comando estándar CAT-320',
+        activo: 1
+      };
+      this.catalogByCode.set(validCode, found);
+    }
+    return found || null;
   }
 
   /**

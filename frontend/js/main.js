@@ -393,8 +393,13 @@ class ExcavatorControlApp {
           const el = document.getElementById(`admin-subview-${subName}`);
           if (el) {
             const isMatch = subName === targetSub;
-            el.hidden = !isMatch;
-            el.classList.toggle('active-subview', isMatch);
+            if (isMatch) {
+              el.removeAttribute('hidden');
+              el.classList.add('active-subview');
+            } else {
+              el.setAttribute('hidden', '');
+              el.classList.remove('active-subview');
+            }
           }
         });
       });
