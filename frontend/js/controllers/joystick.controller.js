@@ -40,11 +40,11 @@ const DEFAULT_LEFT_DIRECTION_MAP = Object.freeze({
     code: APP_CONFIG.JOYSTICK_CODES.DOWN
   },
   [JOYSTICK_DIRECTIONS.LEFT]: {
-    label: 'TORRE DER · #12',
+    label: 'TORRE IZQ · #10',
     code: APP_CONFIG.JOYSTICK_CODES.LEFT
   },
   [JOYSTICK_DIRECTIONS.RIGHT]: {
-    label: 'TORRE IZQ · #10',
+    label: 'TORRE DER · #12',
     code: APP_CONFIG.JOYSTICK_CODES.RIGHT
   }
 });

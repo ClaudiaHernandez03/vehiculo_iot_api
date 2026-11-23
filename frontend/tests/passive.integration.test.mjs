@@ -39,8 +39,8 @@ console.log('[1/4] Verificando configuración de endpoints y validadores de cont
 assert.equal(APP_CONFIG.VEHICLE_ID, 1, 'El ID del vehículo debe ser 1');
 assert.equal(APP_CONFIG.JOYSTICK_CODES.UP, 9, 'AVANZAR debe ser código 9');
 assert.equal(APP_CONFIG.JOYSTICK_CODES.DOWN, 11, 'RETROCEDER debe ser código 11');
-assert.equal(APP_CONFIG.JOYSTICK_CODES.LEFT, 12, 'TORRE DERECHA (según control físico 2.4G) debe ser código 12');
-assert.equal(APP_CONFIG.JOYSTICK_CODES.RIGHT, 10, 'TORRE IZQUIERDA (según control físico 2.4G) debe ser código 10');
+assert.equal(APP_CONFIG.JOYSTICK_CODES.LEFT, 10, 'TORRE IZQUIERDA debe ser código 10');
+assert.equal(APP_CONFIG.JOYSTICK_CODES.RIGHT, 12, 'TORRE DERECHA debe ser código 12');
 assert.equal(APP_CONFIG.RIGHT_JOYSTICK_CODES.UP, 1, 'BRAZO ARRIBA debe ser código 1');
 assert.equal(APP_CONFIG.RIGHT_JOYSTICK_CODES.DOWN, 3, 'BRAZO ABAJO debe ser código 3');
 assert.equal(APP_CONFIG.RIGHT_JOYSTICK_CODES.LEFT, 2, 'ORUGA IZQUIERDA debe ser código 2');

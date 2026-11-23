@@ -146,8 +146,8 @@ void aplicarMascara595(uint8_t pByte, uint8_t sByte) {
   segundobyte = sByte;
 
   digitalWrite(LATCH_PIN, LOW);
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, primerbyte);  // Entra primero y se desplaza al chip encadenado (Primer 74HC: Q1..Q4)
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, segundobyte); // Se queda en el chip conectado directo al ESP8266 (Segundo 74HC: Q0..Q7)
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, segundobyte); // 74HC595 B: Q0..Q7 (central Q4..Q7; inferior Q0..Q3)
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, primerbyte);  // 74HC595 A: directo a D7, optoacoplador superior Q1..Q4
   digitalWrite(LATCH_PIN, HIGH);
 
   Serial.print(F("[74HC595] 1er="));

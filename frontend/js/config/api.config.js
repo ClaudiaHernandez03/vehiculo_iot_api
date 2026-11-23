@@ -70,15 +70,15 @@ export const APP_CONFIG = Object.freeze({
     WS_VEHICULO: (idVehiculo = 1) => `/ws/vehiculos/${encodeURIComponent(idVehiculo)}`
   }),
 
-  // Joystick Izquierdo: Tracción (Avanzar/Retroceder) y Rotación de Torre (Girar torre Derecha/Izquierda según control físico 2.4G)
+  // Joystick Izquierdo: Tracción (Avanzar/Retroceder) y Rotación de Torre (Girar torre Izquierda/Derecha)
   JOYSTICK_CODES: Object.freeze({
     UP: 9,      // Avanzar (Forward)
     DOWN: 11,   // Retroceder (Backward)
-    LEFT: 12,   // Girar torre derecha (Turn the turntable right - Según control físico)
-    RIGHT: 10   // Girar torre izquierda (Turn the turntable left - Según control físico)
+    LEFT: 10,   // Girar torre izquierda (Turn turntable left)
+    RIGHT: 12   // Girar torre derecha (Turn turntable right)
   }),
 
-  // Joystick Derecho: Brazo Hidráulico (Subir/Bajar) y Giro de Orugas/Dirección (Izquierda/Derecha según control físico 2.4G)
+  // Joystick Derecho: Brazo Hidráulico (Subir/Bajar) y Giro de Orugas/Dirección (Izquierda/Derecha)
   RIGHT_JOYSTICK_CODES: Object.freeze({
     UP: 1,      // Subir brazo (Uninstall)
     DOWN: 3,    // Bajar brazo (Dig)
