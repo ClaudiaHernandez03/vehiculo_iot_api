@@ -40,11 +40,11 @@ const DEFAULT_LEFT_DIRECTION_MAP = Object.freeze({
     code: APP_CONFIG.JOYSTICK_CODES.DOWN
   },
   [JOYSTICK_DIRECTIONS.LEFT]: {
-    label: 'ORUGA IZQ · #2',
+    label: 'TORRE IZQ · #10',
     code: APP_CONFIG.JOYSTICK_CODES.LEFT
   },
   [JOYSTICK_DIRECTIONS.RIGHT]: {
-    label: 'ORUGA DER · #4',
+    label: 'TORRE DER · #12',
     code: APP_CONFIG.JOYSTICK_CODES.RIGHT
   }
 });
@@ -63,11 +63,11 @@ export const RIGHT_ARM_DIRECTION_MAP = Object.freeze({
     code: APP_CONFIG.RIGHT_JOYSTICK_CODES.DOWN
   },
   [JOYSTICK_DIRECTIONS.LEFT]: {
-    label: 'TORRE IZQ · #10',
+    label: 'ORUGA IZQ · #2',
     code: APP_CONFIG.RIGHT_JOYSTICK_CODES.LEFT
   },
   [JOYSTICK_DIRECTIONS.RIGHT]: {
-    label: 'TORRE DER · #12',
+    label: 'ORUGA DER · #4',
     code: APP_CONFIG.RIGHT_JOYSTICK_CODES.RIGHT
   }
 });

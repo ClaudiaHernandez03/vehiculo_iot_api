@@ -188,7 +188,7 @@
                 </svg>
                 <div>
                   <h2 id="heading-joystick-left" class="joy-panel-title mb-0">JOYSTICK IZQUIERDO</h2>
-                  <div class="joy-panel-subtitle">Desplazamiento y dirección</div>
+                  <div class="joy-panel-subtitle">Tracción y Giro de Torre</div>
                 </div>
               </div>
               <span class="joy-state-tag" id="joystick-direction-label">NEUTRAL</span>
@@ -201,7 +201,7 @@
                 class="joystick-base"
                 tabindex="0"
                 role="application"
-                aria-label="Joystick izquierdo de desplazamiento y dirección. Arriba Avanzar, Abajo Retroceder, Izquierda Girar izquierda, Derecha Girar derecha."
+                aria-label="Joystick izquierdo de tracción y torre. Arriba Avanzar, Abajo Retroceder, Izquierda Girar torre izquierda, Derecha Girar torre derecha."
                 data-direction="neutral"
               >
                 <div class="joystick-deadzone-ring" aria-hidden="true"></div>
@@ -244,34 +244,38 @@
                   <span class="visually-hidden cmd-btn-label">Retroceder</span>
                 </button>
 
-                <!-- IZQUIERDA: Girar izquierda (#2) -->
+                <!-- IZQUIERDA: Girar torre izquierda (#10) (Turn turntable left) -->
                 <button
                   type="button"
                   class="joy-dir-indicator joy-dir-left manual-cmd-btn"
-                  data-command-code="2"
+                  data-command-code="10"
                   data-short-label="true"
                   data-state="normal"
-                  aria-label="Girar izquierda"
+                  aria-label="Girar torre izquierda"
                 >
-                  <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
-                    <path d="M18 9 L6 19 L18 29 V22 C26 22 31 25 33 31 C32 19 27 14 18 14 Z" fill="currentColor"/>
+                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
+                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                    <polygon points="24,35 16,31 24,27" fill="currentColor"/>
                   </svg>
-                  <span class="visually-hidden cmd-btn-label">Girar izquierda</span>
+                  <span class="visually-hidden cmd-btn-label">Girar torre izquierda</span>
                 </button>
 
-                <!-- DERECHA: Girar derecha (#4) -->
+                <!-- DERECHA: Girar torre derecha (#12) (Turn turntable right) -->
                 <button
                   type="button"
                   class="joy-dir-indicator joy-dir-right manual-cmd-btn"
-                  data-command-code="4"
+                  data-command-code="12"
                   data-short-label="true"
                   data-state="normal"
-                  aria-label="Girar derecha"
+                  aria-label="Girar torre derecha"
                 >
-                  <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
-                    <path d="M22 9 L34 19 L22 29 V22 C14 22 9 25 7 31 C8 19 13 14 22 14 Z" fill="currentColor"/>
+                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
+                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                    <polygon points="24,35 32,31 24,27" fill="currentColor"/>
                   </svg>
-                  <span class="visually-hidden cmd-btn-label">Girar derecha</span>
+                  <span class="visually-hidden cmd-btn-label">Girar torre derecha</span>
                 </button>
 
                 <!-- Esfera 3D Morada Central -->
@@ -441,20 +445,20 @@
                 </svg>
                 <div>
                   <h2 id="heading-joystick-right" class="joy-panel-title mb-0">JOYSTICK DERECHO</h2>
-                  <div class="joy-panel-subtitle">Brazo y torre</div>
+                  <div class="joy-panel-subtitle">Brazo y Dirección de Orugas</div>
                 </div>
               </div>
               <span class="joy-state-tag" id="joystick-right-direction-label">NEUTRAL</span>
             </div>
 
-            <!-- Anillo Circular Neón Morado con Iconos de Brazo Hidráulico y Torre -->
+            <!-- Anillo Circular Neón Morado con Iconos de Brazo Hidráulico y Dirección -->
             <div class="joystick-arena my-auto">
               <div
                 id="joystick-right-base"
                 class="joystick-base joystick-base-right"
                 tabindex="0"
                 role="application"
-                aria-label="Joystick derecho de brazo y torre. Arriba Subir brazo, Abajo Bajar brazo, Izquierda Girar torre izquierda, Derecha Girar torre derecha."
+                aria-label="Joystick derecho de brazo y dirección. Arriba Subir brazo, Abajo Bajar brazo, Izquierda Girar oruga izquierda, Derecha Girar oruga derecha."
                 data-direction="neutral"
               >
                 <div class="joystick-deadzone-ring" aria-hidden="true"></div>
@@ -495,38 +499,34 @@
                   <span class="visually-hidden cmd-btn-label">Mover brazo abajo</span>
                 </button>
 
-                <!-- IZQUIERDA: Girar torre izquierda (#10) -->
+                <!-- IZQUIERDA: Girar oruga izquierda (#2) (Turn trackdirection left) -->
                 <button
                   type="button"
                   class="joy-dir-indicator joy-dir-left manual-cmd-btn"
-                  data-command-code="10"
+                  data-command-code="2"
                   data-short-label="true"
                   data-state="normal"
-                  aria-label="Girar torre izquierda"
+                  aria-label="Girar izquierda"
                 >
-                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
-                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                    <polygon points="24,35 16,31 24,27" fill="currentColor"/>
+                  <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+                    <path d="M18 9 L6 19 L18 29 V22 C26 22 31 25 33 31 C32 19 27 14 18 14 Z" fill="currentColor"/>
                   </svg>
-                  <span class="visually-hidden cmd-btn-label">Girar torre izquierda</span>
+                  <span class="visually-hidden cmd-btn-label">Girar izquierda</span>
                 </button>
 
-                <!-- DERECHA: Girar torre derecha (#12) -->
+                <!-- DERECHA: Girar oruga derecha (#4) (Turn trackdirection right) -->
                 <button
                   type="button"
                   class="joy-dir-indicator joy-dir-right manual-cmd-btn"
-                  data-command-code="12"
+                  data-command-code="4"
                   data-short-label="true"
                   data-state="normal"
-                  aria-label="Girar torre derecha"
+                  aria-label="Girar derecha"
                 >
-                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
-                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                    <polygon points="24,35 32,31 24,27" fill="currentColor"/>
+                  <svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true">
+                    <path d="M22 9 L34 19 L22 29 V22 C14 22 9 25 7 31 C8 19 13 14 22 14 Z" fill="currentColor"/>
                   </svg>
-                  <span class="visually-hidden cmd-btn-label">Girar torre derecha</span>
+                  <span class="visually-hidden cmd-btn-label">Girar derecha</span>
                 </button>
 
                 <!-- Esfera 3D Morada Central -->

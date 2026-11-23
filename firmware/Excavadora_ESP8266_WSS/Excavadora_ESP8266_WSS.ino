@@ -136,20 +136,12 @@ void imprimirBinario(uint8_t valor) {
 
 /**
  * Envía los bits en cascada a los dos 74HC595:
- *   - pByte va al PRIMER 74HC595
- *   - sByteMotores se combina con estadoLuz (Q7) y estadoSonido (Q4) para ir al SEGUNDO 74HC595.
+ *   - pByte va al PRIMER 74HC595 (Q1=Retroceder, Q2=Avanzar, Q3=Torre Der, Q4=Torre Izq)
+ *   - sByte va al SEGUNDO 74HC595 conectado directo al ESP8266 (Q0..Q7)
  */
-void aplicarMascara595(uint8_t pByte, uint8_t sByteMotores) {
-  primerbyte = pByte;
-
-  // Combinar los bits de movimiento/pulso con los estados persistentes de Luz y Sonido
-  segundobyte = sByteMotores;
-  if (estadoLuz) {
-    segundobyte |= (1 << 7); // Q7 = Luz
-  }
-  if (estadoSonido) {
-    segundobyte |= (1 << 4); // Q4 = Sonido
-  }
+void aplicarMascara595(uint8_t pByte, uint8_t sByte) {
+  primerbyte  = pByte;
+  segundobyte = sByte;
 
   digitalWrite(LATCH_PIN, LOW);
   shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, primerbyte);  // Entra primero y se desplaza al chip encadenado (Primer 74HC: Q1..Q4)
@@ -160,24 +152,18 @@ void aplicarMascara595(uint8_t pByte, uint8_t sByteMotores) {
   imprimirBinario(primerbyte);
   Serial.print(F(" | 2do="));
   imprimirBinario(segundobyte);
-  Serial.printf(" [Luz=%s, Sonido=%s]\n", estadoLuz ? "ON" : "OFF", estadoSonido ? "ON" : "OFF");
+  Serial.println();
 }
 
 /**
  * FUNCIÓN DETENER PRIORITARIA:
- * Apaga inmediatamente todos los motores de tracción, brazo y torre.
- * Por defecto conserva la luz y el sonido si ya estaban encendidos.
+ * Apaga inmediatamente todas las salidas de ambos registros 74HC595.
  */
-void detenerTodo(const char* motivo, bool conservarLuzYSonido) {
+void detenerTodo(const char* motivo, bool conservarLuzYSonido = true) {
   pulsoAuxiliarActivo       = false;
   pasoDemoTemporizadoActivo = false;
   movimientoManualActivo    = false;
   duracionAccionMs          = 0;
-
-  if (!conservarLuzYSonido) {
-    estadoLuz    = false;
-    estadoSonido = false;
-  }
 
   aplicarMascara595(0b00000000, 0b00000000);
   Serial.printf("[DETENER] Salidas en neutro (%s)\n", motivo);
@@ -254,29 +240,29 @@ void ejecutarPorCodigoONombre(int codigo, const String& nombre, unsigned long du
       sByte = (1 << 3);
       break;
 
-    case 5: // Velocidad -> 2do 595 Q6 (pulso)
-      Serial.println(F("[CMD #5] Velocidad -> 2do 595 Q6"));
+    case 5: // Velocidad -> 2do 595 Q6 (pulso 300ms)
+      Serial.println(F("[CMD #5] Velocidad -> 2do 595 Q6 (pulso 300ms)"));
       sByte = (1 << 6);
       esAuxiliarPulso = true;
       break;
 
-    case 6: // Sonido -> 2do 595 Q4 (Toggle: prende / apaga con el mismo botón)
-      estadoSonido = !estadoSonido;
-      Serial.printf("[CMD #6] Sonido TOGGLE -> %s (2do 595 Q4)\n", estadoSonido ? "ENCENDIDO" : "APAGADO");
-      aplicarMascara595(primerbyte, 0);
-      return;
+    case 6: // Sonido / Música -> 2do 595 Q4 (pulso 300ms para alternar ON/OFF en control)
+      Serial.println(F("[CMD #6] Sonido/Música -> 2do 595 Q4 (pulso 300ms)"));
+      sByte = (1 << 4);
+      esAuxiliarPulso = true;
+      break;
 
-    case 7: // Demo -> 2do 595 Q5 (pulso)
-      Serial.println(F("[CMD #7] Demo -> 2do 595 Q5"));
+    case 7: // Demo -> 2do 595 Q5 (pulso 300ms)
+      Serial.println(F("[CMD #7] Demo -> 2do 595 Q5 (pulso 300ms)"));
       sByte = (1 << 5);
       esAuxiliarPulso = true;
       break;
 
-    case 8: // Luz -> 2do 595 Q7 (Toggle: prende / apaga con el mismo botón)
-      estadoLuz = !estadoLuz;
-      Serial.printf("[CMD #8] Luz TOGGLE -> %s (2do 595 Q7)\n", estadoLuz ? "ENCENDIDA" : "APAGADA");
-      aplicarMascara595(primerbyte, 0);
-      return;
+    case 8: // Luz -> 2do 595 Q7 (pulso 300ms para alternar ON/OFF en control)
+      Serial.println(F("[CMD #8] Luz -> 2do 595 Q7 (pulso 300ms)"));
+      sByte = (1 << 7);
+      esAuxiliarPulso = true;
+      break;
 
     // -------------------------------------------------------------
     // PRIMER 74HC595 (según tu hoja):
