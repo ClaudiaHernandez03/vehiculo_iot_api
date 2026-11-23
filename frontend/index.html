@@ -177,7 +177,7 @@
     <div id="view-control" class="view-section active-view flex-grow-1" role="tabpanel">
       <div class="row g-3 align-items-stretch rc-deck-zone my-auto">
         <!-- COLUMNA IZQUIERDA: JOYSTICK IZQUIERDO (50% en móvil para verse lado a lado sin deslizar) -->
-        <div class="col-6 col-lg-4 order-2 order-lg-1">
+        <div class="col-6 col-lg-4 order-2 order-lg-1 rc-col-joy-left">
           <section class="joy-panel-card h-100 d-flex flex-column justify-content-between" aria-labelledby="heading-joystick-left">
             <div class="joy-panel-header">
               <div class="d-flex align-items-center gap-2">
@@ -290,7 +290,7 @@
         </div>
 
         <!-- COLUMNA CENTRAL: SELECTOR DE VEHÍCULO + EXCAVADORA + DETENER + FUNCIONES (Arriba en móvil, al centro en escritorio) -->
-        <div class="col-12 col-lg-4 order-1 order-lg-2 d-flex flex-column justify-content-between">
+        <div class="col-12 col-lg-4 order-1 order-lg-2 rc-col-center d-flex flex-column justify-content-between">
           <section class="center-cockpit-column h-100 d-flex flex-column justify-content-between" aria-label="Consola central del vehículo">
             <!-- Selector Superior de Vehículo -->
             <div class="text-center">
@@ -439,7 +439,7 @@
         </div>
 
         <!-- COLUMNA DERECHA: JOYSTICK DERECHO (50% en móvil lado a lado con el izquierdo) -->
-        <div class="col-6 col-lg-4 order-3">
+        <div class="col-6 col-lg-4 order-3 rc-col-joy-right">
           <section class="joy-panel-card h-100 d-flex flex-column justify-content-between" aria-labelledby="heading-joystick-right">
             <div class="joy-panel-header">
               <div class="d-flex align-items-center gap-2">

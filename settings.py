@@ -34,11 +34,12 @@ class Settings:
         "http://localhost:8080",
         "http://127.0.0.1:8080",
         "https://vehiculo-iot-api.duckdns.org",
+        "https://claudiahernandez03.github.io",
     )
 
     # Placeholder documentado donde se puede fijar en código o en .env la URL de GitHub Pages
     # Ejemplo: "https://tu-usuario.github.io"
-    GITHUB_PAGES_ORIGIN_PLACEHOLDER = ""
+    GITHUB_PAGES_ORIGIN_PLACEHOLDER = "https://claudiahernandez03.github.io"
 
     def __init__(self) -> None:
         # Metadatos de la aplicación

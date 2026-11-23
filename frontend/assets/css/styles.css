@@ -1228,3 +1228,171 @@ body {
     font-size: 0.68rem;
   }
 }
+
+/* ==========================================================================
+   ADAPTACIÓN DINÁMICA POR ORIENTACIÓN DEL DISPOSITIVO (HORIZONTAL / VERTICAL)
+   ========================================================================== */
+
+/* 1. MÓVIL EN ORIENTACIÓN VERTICAL (PORTRAIT) */
+@media (max-width: 991.98px) and (orientation: portrait) {
+  .rc-col-center {
+    order: 1 !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  .rc-col-joy-left {
+    order: 2 !important;
+    width: 50% !important;
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+  .rc-col-joy-right {
+    order: 3 !important;
+    width: 50% !important;
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* 2. MÓVIL / TABLET EN ORIENTACIÓN HORIZONTAL (LANDSCAPE - MANDO DE CONTROL REMOTO) */
+@media (orientation: landscape) and (max-height: 580px) {
+  .cat-topbar {
+    padding: 0.12rem 0 !important;
+  }
+  .cat-main-title {
+    font-size: 0.8rem !important;
+  }
+  .cat-subtitle {
+    display: none !important;
+  }
+  .badge-chip {
+    padding: 0.06rem 0.35rem !important;
+    font-size: 0.6rem !important;
+  }
+  .status-capsule {
+    padding: 0.1rem 0.4rem !important;
+    gap: 0.25rem !important;
+  }
+  .status-name {
+    display: none !important;
+  }
+  .cat-tabs-bar {
+    padding: 0.15rem 0 !important;
+  }
+  .cat-tab-pill {
+    min-height: 26px !important;
+    font-size: 0.68rem !important;
+    padding: 0.1rem 0.3rem !important;
+  }
+
+  /* Distribución horizontal fija: Palanca Izq (32%) | Consola Central (36%) | Palanca Der (32%) */
+  .rc-col-joy-left {
+    order: 1 !important;
+    width: 32% !important;
+    flex: 0 0 32% !important;
+    max-width: 32% !important;
+    padding: 0 0.25rem !important;
+  }
+  .rc-col-center {
+    order: 2 !important;
+    width: 36% !important;
+    flex: 0 0 36% !important;
+    max-width: 36% !important;
+    padding: 0 0.25rem !important;
+  }
+  .rc-col-joy-right {
+    order: 3 !important;
+    width: 32% !important;
+    flex: 0 0 32% !important;
+    max-width: 32% !important;
+    padding: 0 0.25rem !important;
+  }
+
+  .joy-panel-card {
+    padding: 0.25rem 0.35rem !important;
+  }
+  .joy-panel-title {
+    font-size: 0.65rem !important;
+  }
+  .joy-panel-subtitle,
+  .joy-header-svg {
+    display: none !important;
+  }
+  .joy-state-tag {
+    font-size: 0.55rem !important;
+    padding: 0.05rem 0.25rem !important;
+  }
+
+  .joystick-base {
+    width: 118px !important;
+    height: 118px !important;
+  }
+  .joystick-stick {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .joy-dir-indicator svg {
+    width: 20px !important;
+    height: 18px !important;
+  }
+
+  .vehicle-selector-caption {
+    display: none !important;
+  }
+  .veh-picker-pill {
+    padding: 0.1rem 0.4rem !important;
+    font-size: 0.68rem !important;
+  }
+  .veh-arrow-btn {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .excavator-hero-img {
+    max-height: 35px !important;
+  }
+  .stop-hazard-housing {
+    padding: 0.15rem 0.25rem !important;
+    margin: 0.12rem 0 !important;
+  }
+  .hazard-stripes {
+    height: 14px !important;
+  }
+  .btn-stop-priority {
+    min-height: 30px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .functions-divider {
+    font-size: 0.55rem !important;
+    margin-bottom: 0.12rem !important;
+  }
+  .functions-grid {
+    gap: 0.2rem !important;
+  }
+  .func-tile {
+    min-height: 34px !important;
+    padding: 0.12rem 0.1rem !important;
+  }
+  .func-tile-icon {
+    font-size: 0.88rem !important;
+  }
+  .func-tile-label {
+    font-size: 0.55rem !important;
+  }
+  .inline-demo-drawer {
+    margin-top: 0.15rem !important;
+    padding: 0.18rem !important;
+  }
+  .cat-bottom-frame {
+    padding: 0.15rem 0.4rem !important;
+  }
+  .bottom-label,
+  .bottom-online-pill,
+  .bottom-cmd-pill {
+    font-size: 0.58rem !important;
+  }
+  .standalone-credits-footer {
+    display: none !important;
+  }
+}
