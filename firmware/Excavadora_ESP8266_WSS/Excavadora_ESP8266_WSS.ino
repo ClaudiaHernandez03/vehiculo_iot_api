@@ -152,8 +152,8 @@ void aplicarMascara595(uint8_t pByte, uint8_t sByteMotores) {
   }
 
   digitalWrite(LATCH_PIN, LOW);
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, segundobyte); // Entra primero y se desplaza al 2do 595
-  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, primerbyte);  // Queda en el 1er 595
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, primerbyte);  // Entra primero y se desplaza al chip encadenado (Primer 74HC: Q1..Q4)
+  shiftOut(DATA_PIN, CLOCK_PIN, MSBFIRST, segundobyte); // Se queda en el chip conectado directo al ESP8266 (Segundo 74HC: Q0..Q7)
   digitalWrite(LATCH_PIN, HIGH);
 
   Serial.print(F("[74HC595] 1er="));
