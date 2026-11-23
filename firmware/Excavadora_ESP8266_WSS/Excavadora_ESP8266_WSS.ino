@@ -7,21 +7,21 @@
  * AJUSTES NUEVOS INTEGRADOS (CONFIRMADOS CON DIAGRAMA FÍSICO):
  *
  * 1. NUEVA ASIGNACIÓN DE PINES 74HC595 (SEGÚN TU DIAGRAMA MANUSCRITO):
- *    - PRIMER 74HC595 (primerbyte):
- *        Q1 (1 << 1) -> Retroceder            (Código 11) [Joystick Izquierdo Abajo]
- *        Q2 (1 << 2) -> Avanzar               (Código 9)  [Joystick Izquierdo Arriba]
- *        Q3 (1 << 3) -> Girar torre Derecha   (Código 12) [Joystick Derecho Derecha]
- *        Q4 (1 << 4) -> Girar torre Izquierda (Código 10) [Joystick Derecho Izquierda]
+ *    - 74HC595 A, DIRECTO A D7 (primerbyte; optoacoplador superior):
+ *        Q4 (1 << 4) -> Retroceder            (Código 11)
+ *        Q3 (1 << 3) -> Avanzar               (Código 9)
+ *        Q2 (1 << 2) -> Girar torre Izquierda (Código 10)
+ *        Q1 (1 << 1) -> Girar torre Derecha   (Código 12)
  *
- *    - SEGUNDO 74HC595 (segundobyte):
- *        Q0 (1 << 0) -> Izquierda             (Código 2)  [Joystick Izquierdo Izquierda]
- *        Q1 (1 << 1) -> Subir brazo           (Código 1)  [Joystick Derecho Arriba]
- *        Q2 (1 << 2) -> Bajar brazo           (Código 3)  [Joystick Derecho Abajo]
- *        Q3 (1 << 3) -> Derecha               (Código 4)  [Joystick Izquierdo Derecha]
- *        Q4 (1 << 4) -> Sonido                (Código 6)  [Boton Toggle Sonido]
- *        Q5 (1 << 5) -> Demo                  (Código 7)  [Boton Funcion Demo]
- *        Q6 (1 << 6) -> Velocidad             (Código 5)  [Boton Funcion Velocidad]
- *        Q7 (1 << 7) -> Luz                   (Código 8)  [Boton Toggle Luz]
+ *    - 74HC595 B, EN CASCADA (segundobyte; optoacopladores central e inferior):
+ *        Q7 (1 << 7) -> Luz                   (Código 8)  [opto central, canal 1]
+ *        Q6 (1 << 6) -> Velocidad             (Código 5)  [opto central, canal 2]
+ *        Q5 (1 << 5) -> Demo                  (Código 7)  [opto central, canal 3]
+ *        Q4 (1 << 4) -> Sonido                (Código 6)  [opto central, canal 4]
+ *        Q3 (1 << 3) -> Girar derecha         (Código 4)  [opto inferior, canal 1]
+ *        Q2 (1 << 2) -> Bajar brazo           (Código 3)  [opto inferior, canal 2]
+ *        Q1 (1 << 1) -> Subir brazo           (Código 1)  [opto inferior, canal 3]
+ *        Q0 (1 << 0) -> Girar izquierda       (Código 2)  [opto inferior, canal 4]
  *
  * 2. BOTÓN FÍSICO DE DETENER / PARO DE EMERGENCIA (PIN D2 / GPIO4):
  *    - Configurado con INPUT_PULLUP interno.
@@ -136,8 +136,10 @@ void imprimirBinario(uint8_t valor) {
 
 /**
  * Envía los bits en cascada a los dos 74HC595:
- *   - pByte va al PRIMER 74HC595 (Q1=Retroceder, Q2=Avanzar, Q3=Torre Der, Q4=Torre Izq)
- *   - sByte va al SEGUNDO 74HC595 conectado directo al ESP8266 (Q0..Q7)
+ *   - pByte va al 74HC595 A conectado directamente a D7 (optoacoplador superior).
+ *   - sByte va al 74HC595 B en cascada:
+ *       Q4..Q7 -> optoacoplador central.
+ *       Q0..Q3 -> optoacoplador inferior (tercer optoacoplador).
  */
 void aplicarMascara595(uint8_t pByte, uint8_t sByte) {
   primerbyte  = pByte;
@@ -159,7 +161,7 @@ void aplicarMascara595(uint8_t pByte, uint8_t sByte) {
  * FUNCIÓN DETENER PRIORITARIA:
  * Apaga inmediatamente todas las salidas de ambos registros 74HC595.
  */
-void detenerTodo(const char* motivo, bool conservarLuzYSonido = true) {
+void detenerTodo(const char* motivo, bool conservarLuzYSonido) {
   pulsoAuxiliarActivo       = false;
   pasoDemoTemporizadoActivo = false;
   movimientoManualActivo    = false;
@@ -216,9 +218,11 @@ void ejecutarPorCodigoONombre(int codigo, const String& nombre, unsigned long du
       return;
 
     // -------------------------------------------------------------
-    // SEGUNDO 74HC595 (según tu hoja):
-    // Q0 = Izquierda | Q1 = Subir brazo | Q2 = Bajar brazo | Q3 = Derecha
-    // Q4 = Sonido    | Q5 = Demo        | Q6 = Velocidad   | Q7 = Luz
+    // SEGUNDO 74HC595 (en cascada):
+    // TERCER optoacoplador (inferior): Q0 = Izquierda, Q1 = Subir brazo,
+    //                                  Q2 = Bajar brazo, Q3 = Derecha.
+    // SEGUNDO optoacoplador (central): Q4 = Sonido, Q5 = Demo,
+    //                                  Q6 = Velocidad, Q7 = Luz.
     // -------------------------------------------------------------
     case 1: // Subir brazo (Joystick Derecho Arriba) -> 2do 595 Q1
       Serial.println(F("[CMD #1] Subir brazo -> 2do 595 Q1"));
@@ -265,27 +269,27 @@ void ejecutarPorCodigoONombre(int codigo, const String& nombre, unsigned long du
       break;
 
     // -------------------------------------------------------------
-    // PRIMER 74HC595 (según tu hoja):
-    // Q1 = Retroceder | Q2 = Avanzar | Q3 = Girar torre Der | Q4 = Girar torre Izq
+    // PRIMER 74HC595 A (según tu último dibujo):
+    // Q4 = Retroceder | Q3 = Avanzar | Q2 = Girar torre Izq | Q1 = Girar torre Der
     // -------------------------------------------------------------
-    case 9: // Avanzar (Joystick Izquierdo Arriba) -> 1er 595 Q2
-      Serial.println(F("[CMD #9] Avanzar -> 1er 595 Q2"));
+    case 9: // Avanzar -> 1er 595 Q3 (cable amarillo del opto superior)
+      Serial.println(F("[CMD #9] Avanzar -> 1er 595 Q3"));
+      pByte = (1 << 3);
+      break;
+
+    case 10: // Girar torre Izquierda -> 1er 595 Q2 (cable rosa del opto superior)
+      Serial.println(F("[CMD #10] Girar torre Izquierda -> 1er 595 Q2"));
       pByte = (1 << 2);
       break;
 
-    case 10: // Girar torre Izquierda (Joystick Derecho Izquierda) -> 1er 595 Q4
-      Serial.println(F("[CMD #10] Girar torre Izquierda -> 1er 595 Q4"));
+    case 11: // Retroceder -> 1er 595 Q4 (cable café del opto superior)
+      Serial.println(F("[CMD #11] Retroceder -> 1er 595 Q4"));
       pByte = (1 << 4);
       break;
 
-    case 11: // Retroceder (Joystick Izquierdo Abajo) -> 1er 595 Q1
-      Serial.println(F("[CMD #11] Retroceder -> 1er 595 Q1"));
+    case 12: // Girar torre Derecha -> 1er 595 Q1 (cable naranja del opto superior)
+      Serial.println(F("[CMD #12] Girar torre Derecha -> 1er 595 Q1"));
       pByte = (1 << 1);
-      break;
-
-    case 12: // Girar torre Derecha (Joystick Derecho Derecha) -> 1er 595 Q3
-      Serial.println(F("[CMD #12] Girar torre Derecha -> 1er 595 Q3"));
-      pByte = (1 << 3);
       break;
 
     default:

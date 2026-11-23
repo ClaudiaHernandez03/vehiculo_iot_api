@@ -244,31 +244,15 @@
                   <span class="visually-hidden cmd-btn-label">Retroceder</span>
                 </button>
 
-                <!-- IZQUIERDA: Girar torre izquierda (#10) (Turn turntable left) -->
+                <!-- IZQUIERDA: Girar torre derecha (#12) (Turn the turntable right - Según control físico 2.4G) -->
                 <button
                   type="button"
                   class="joy-dir-indicator joy-dir-left manual-cmd-btn"
-                  data-command-code="10"
-                  data-short-label="true"
-                  data-state="normal"
-                  aria-label="Girar torre izquierda"
-                >
-                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
-                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-                    <polygon points="24,35 16,31 24,27" fill="currentColor"/>
-                  </svg>
-                  <span class="visually-hidden cmd-btn-label">Girar torre izquierda</span>
-                </button>
-
-                <!-- DERECHA: Girar torre derecha (#12) (Turn turntable right) -->
-                <button
-                  type="button"
-                  class="joy-dir-indicator joy-dir-right manual-cmd-btn"
                   data-command-code="12"
                   data-short-label="true"
                   data-state="normal"
                   aria-label="Girar torre derecha"
+                  title="Girar torre derecha (#12) [Control físico: Turn turntable right]"
                 >
                   <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
                     <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -276,6 +260,24 @@
                     <polygon points="24,35 32,31 24,27" fill="currentColor"/>
                   </svg>
                   <span class="visually-hidden cmd-btn-label">Girar torre derecha</span>
+                </button>
+
+                <!-- DERECHA: Girar torre izquierda (#10) (Turn the turntable left - Según control físico 2.4G) -->
+                <button
+                  type="button"
+                  class="joy-dir-indicator joy-dir-right manual-cmd-btn"
+                  data-command-code="10"
+                  data-short-label="true"
+                  data-state="normal"
+                  aria-label="Girar torre izquierda"
+                  title="Girar torre izquierda (#10) [Control físico: Turn turntable left]"
+                >
+                  <svg viewBox="0 0 48 44" width="42" height="38" aria-hidden="true">
+                    <path d="M14 23 L24 9 L34 21" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 27 C10 34 36 34 36 27" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+                    <polygon points="24,35 16,31 24,27" fill="currentColor"/>
+                  </svg>
+                  <span class="visually-hidden cmd-btn-label">Girar torre izquierda</span>
                 </button>
 
                 <!-- Esfera 3D Morada Central -->
@@ -378,16 +380,19 @@
                   <span class="cmd-btn-label func-tile-label">Luz</span>
                 </button>
 
-                <!-- Demo (#7 / Selector de Secuencias DEMO) -->
+                <!-- Demo (#7) -->
                 <button
                   type="button"
-                  id="btn-toggle-inline-demo"
-                  class="func-tile func-tile-purple"
-                  aria-expanded="true"
-                  aria-controls="inline-demo-drawer"
+                  id="btn-demo-cmd"
+                  class="func-tile func-tile-purple manual-cmd-btn"
+                  data-command-code="7"
+                  data-short-label="true"
+                  data-state="normal"
+                  aria-label="Demo"
+                  title="Demo (#7)"
                 >
                   <i class="bi bi-play-fill func-tile-icon" aria-hidden="true"></i>
-                  <span class="func-tile-label">Demo</span>
+                  <span class="cmd-btn-label func-tile-label">Demo</span>
                 </button>
               </div>
 

@@ -119,7 +119,7 @@ export class AdminController {
       vehicleId: 1,
       remainingSeconds: 0,
       holderId: null,
-      allowedCodes: [9, 11, 2, 4, 8] // Orugas + Luz en modo exhibición seguro
+      allowedCodes: [9, 11, 2, 4, 8] // Tracción básica para prueba de manejo temporal
     };
     this.guestTimerId = null;
 
