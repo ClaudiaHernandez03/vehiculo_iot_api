@@ -15,7 +15,7 @@ API REST y WebSocket desarrollada con **Python**, **FastAPI** y **Programación 
 | **v1.0 — Revisión y preparación** | Configuración inicial del proyecto en Python con POO (`settings.py`, `database.py`), variables de entorno (`.env.example`) y script de prueba (`probar_conexion.py`). Sirve para establecer y validar la conexión segura con la base de datos `vehiculo_iot` en Amazon RDS. | Completado |
 | **v2.0 — API y procedimientos almacenados** | Integración en `database.py` y `main.py` de los 21 Stored Procedures de MySQL (vehículos, comandos, estado, historial, demos y movimientos demo) y su tabla de parámetros. Sirve para administrar el catálogo completo y registrar movimientos individuales en una sola transacción. | Completado |
 | **v3.0 — Comunicación IoT y WebSocket** | Implementación del canal WebSocket por vehículo (`websocket_manager.py`) y del coordinador de demostraciones (`demo_manager.py`). Sirve para enviar el último estado al conectar, notificar movimientos individuales en tiempo real y ejecutar secuencias DEMO temporizadas sin ensuciar el historial individual, bloqueando ejecuciones simultáneas (`409 Conflict`) y permitiendo su cancelación. | Completado |
-| **v4.0 — Despliegue final en AWS** | Publicación en Amazon EC2 (Windows Server) con servicio automático (`VehiculoIoTAPI` vía NSSM), proxy inverso Caddy con HTTPS y WSS, interfaz Swagger UI en tema oscuro (`static/swagger-custom.css`), código comentado y reporte técnico en [`docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`](docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx). Sirve para operar la API públicamente de forma continua sin depender de Visual Studio Code. | Completado |
+| **v4.0 — Despliegue final en AWS** | Publicación en Amazon EC2 (Windows Server) con servicio automático (`VehiculoIoTAPI` vía NSSM), proxy inverso Caddy con HTTPS y WSS, interfaz Swagger UI en tema oscuro (`static/swagger-custom.css`) y código de producción optimizado. Sirve para operar la API públicamente de forma continua sin depender de Visual Studio Code. | Completado |
 
 ---
 
@@ -30,7 +30,8 @@ API REST y WebSocket desarrollada con **Python**, **FastAPI** y **Programación 
 - `exceptions.py`: jerarquía de excepciones de dominio (`VehiculoIoTError` y subclases) y clase `ExceptionManager` para el manejo centralizado de errores HTTP y MySQL.
 - `settings.py`: clase `Settings` que centraliza y valida las variables de entorno (`.env`), configuración de RDS y lista explícita de orígenes CORS.
 - `static/swagger-custom.css`: hoja de estilos en tema oscuro para la documentación interactiva en `/docs`.
-- `docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`: documentación y evidencias del despliegue en Amazon EC2.
+- `firmware/Excavadora_ESP8266_WSS/Excavadora_ESP8266_WSS.ino`: sketch de firmware C++ para ESP8266 con cliente WSS seguro, decodificación JSON, botón físico de parada y control por registros de desplazamiento 74HC595.
+- `frontend/`: aplicación web responsiva (HTML5/CSS3/JavaScript) con joysticks virtuales, métricas de conectividad y control en tiempo real.
 
 ---
 
@@ -237,7 +238,7 @@ Eventos principales en formato JSON:
 
 ## Guía para Actualizar Posteriormente el Firmware del ESP8266 en Arduino IDE
 
-*(Nota: El código fuente `.ino` del ESP8266 se administra en un proyecto de Arduino IDE separado y no forma parte de este repositorio).*
+*(Nota: El código fuente `.ino` oficial del ESP8266 se encuentra en `firmware/Excavadora_ESP8266_WSS/Excavadora_ESP8266_WSS.ino`).*
 
 ### 1. Mapeo Físico Confirmado (Conservar sin cambios)
 - **Pines del ESP8266 NodeMCU:**
@@ -299,25 +300,11 @@ Eventos principales en formato JSON:
    - Swagger UI: `http://127.0.0.1:8000/docs`
    - Salud del servicio: `http://127.0.0.1:8000/health`
 
-3. **Ejecutar las suites de pruebas automatizadas (sobre capa aislada sin tocar RDS de producción):**
-   ```powershell
-   # Suite de 30 pruebas obligatorias de DETENER, secuencia, concurrencia, watchdog y DEMOs (4 pasos)
-   python test_detener.py
-
-   # Suite de integración base (Stored Procedures, DemoManager y WebSocket)
-   python test_examen26.py
-
-   # Suite de integración HTTP, CORS y X-API-Key
-   python test_http_endpoints.py
-
-   # Suite de WebSocket individual y global
-   python test_websocket_global.py
-   ```
-   *(Nota: Las pruebas automatizadas en Python validan la lógica de la API y utilizan **Simulación de protocolo WebSocket (Mock de cliente ESP8266)** para el ACK. Las pruebas físicas de hardware requieren el ESP8266 con el firmware actualizado y la excavadora CAT-320 conectada).*
-
-### Limitaciones Pendientes de Verificación en Etapas Posteriores
-- **Verificación en Amazon RDS real:** Confirmar desde EC2 (o una IP autorizada en el Security Group de RDS) el `id_comando` real asignado al comando `Detener` (`codigo = 0`) del vehículo `1` en la tabla `comandos`.
-- **Actualización física del firmware ESP8266:** Cargar en Arduino IDE los cambios documentados arriba para eliminar el timer de 1500 ms en el microcontrolador y emitir el ACK físico `detencion_confirmada`.
+3. **Verificación y Pruebas:**
+   - Swagger UI interactivo: `http://127.0.0.1:8000/docs`
+   - Chequeo de salud del servicio: `http://127.0.0.1:8000/health`
+   - WebSocket en tiempo real: `ws://127.0.0.1:8000/ws/vehiculos/1`
+   - Aplicación Frontend de Cabina: Abrir `frontend/index.html` en el navegador o acceder a la versión desplegada en GitHub Pages.
 
 ---
 
@@ -335,9 +322,7 @@ La API se encuentra desplegada en una instancia de **Amazon EC2 con Windows Serv
 - **Direcciones públicas de verificación:**
   - Documentación Swagger UI: `https://vehiculo-iot-api.duckdns.org/docs`
   - Estado del servicio: `https://vehiculo-iot-api.duckdns.org/health`
-  - WebSocket seguro (Excavadora IoT): `wss://vehiculo-iot-api.duckdns.org/ws/vehiculos/6`
-- **Reporte detallado y evidencias del despliegue:**
-  Disponible en [`docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx`](docs/despliegue_aws/Reporte_Despliegue_API_IoT_AWS.docx).
+  - WebSocket seguro (Excavadora IoT): `wss://vehiculo-iot-api.duckdns.org/ws/vehiculos/1`
 - **Archivos adicionales para entornos Linux:**
   También se incluyen en el repositorio `vehiculo_iot_api.service` (systemd), `nginx.conf` y `deploy_ec2.sh` como referencia para despliegues sobre distribuciones Linux.
 
