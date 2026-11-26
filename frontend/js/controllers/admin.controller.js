@@ -95,6 +95,24 @@ export class AdminController {
     this.currentBuyerId = 101; // Comprador A por defecto al elegir rol USUARIO
     this.adminSupportConsent = true; // Consentimiento explícito de soporte técnico
 
+    this.currentUser = {
+      id_cliente: 100,
+      nombre: 'Administrador General (Empresa IoT)',
+      correo: 'admin@cat320-iot.mx',
+      rol: ROLES.ADMIN,
+      permisos: 'CRUD Inventario, Clientes, Asignaciones, Editor DEMO Fábrica, Auditoría Global'
+    };
+
+    // Restaurar sesión de localStorage si existe
+    try {
+      const savedUser = JSON.parse(localStorage.getItem('iot_session_user'));
+      if (savedUser && savedUser.rol) {
+        this.currentUser = savedUser;
+        this.currentRole = savedUser.rol;
+        this.currentBuyerId = Number(savedUser.id_cliente) || 101;
+      }
+    } catch {}
+
     this.models = [...DEFAULT_COMMERCIAL_MODELS];
     this.clients = [...DEFAULT_CLIENTS];
     this.units = [];
@@ -216,6 +234,99 @@ export class AdminController {
         message: error?.message || 'No se pudo consultar el catálogo en RDS.'
       });
     }
+  }
+
+  /**
+   * Inicia sesión validando credenciales/correo o rol con Amazon RDS.
+   */
+  async loginUser({ correo, rol, id_cliente = null, password = null }) {
+    let user = null;
+    try {
+      if (typeof this.apiService.login === 'function') {
+        const res = await this.apiService.login({ correo, rol, password });
+        if (res?.ok && res.usuario) {
+          user = res.usuario;
+        }
+      }
+    } catch (err) {
+      console.warn('API login fallback local:', err);
+    }
+
+    if (!user) {
+      const allProfiles = [
+        {
+          id_cliente: 100,
+          nombre: 'Administrador General (Empresa IoT)',
+          correo: 'admin@cat320-iot.mx',
+          rol: ROLES.ADMIN,
+          permisos: 'CRUD Inventario, Clientes, Asignaciones, Editor DEMO Fábrica, Auditoría Global'
+        },
+        {
+          id_cliente: 101,
+          nombre: 'Claudia América Hernández (Comprador A)',
+          correo: 'claudia.comprador@empresa-iot.mx',
+          rol: ROLES.USUARIO,
+          permisos: 'Control Total y Monitoreo de Mis Vehículos (#1), Editor DEMO Propia (1-4 pasos)'
+        },
+        {
+          id_cliente: 102,
+          nombre: 'Constructora Industrial del Centro (Comprador B)',
+          correo: 'operaciones@constructora-centro.mx',
+          rol: ROLES.USUARIO,
+          permisos: 'Control y Editor DEMO solo en sus unidades asignadas (Aislamiento BOLA/IDOR)'
+        },
+        {
+          id_cliente: 103,
+          nombre: 'Visitante Sala de Exhibición (Prospecto)',
+          correo: 'exhibicion@cat320-iot.mx',
+          rol: ROLES.INVITADO,
+          permisos: 'Catálogo Público y Prueba Temporal Exclusiva 60s'
+        }
+      ];
+
+      user = allProfiles.find((p) =>
+        (correo && p.correo.toLowerCase() === correo.toLowerCase()) ||
+        (id_cliente && Number(p.id_cliente) === Number(id_cliente)) ||
+        (rol && p.rol === rol)
+      ) || allProfiles[0];
+    }
+
+    this.currentUser = { ...user };
+    this.currentRole = user.rol;
+    this.currentBuyerId = Number(user.id_cliente) || (user.rol === ROLES.ADMIN ? 100 : 101);
+
+    try {
+      localStorage.setItem('iot_session_user', JSON.stringify(this.currentUser));
+    } catch {}
+
+    this.recordAudit(
+      this.currentUser.nombre,
+      'LOGIN_USUARIO',
+      `Inicio de sesión como ${this.currentRole}`,
+      '200 OK · Sesión activa'
+    );
+
+    this.emitState();
+    this.emitFeedback({
+      type: 'success',
+      title: `Sesión iniciada: ${this.currentUser.nombre}`,
+      message: `Rol activo: ${this.currentRole}. Pestañas y permisos adaptados al 100%.`
+    });
+
+    return this.currentUser;
+  }
+
+  logoutUser() {
+    this.recordAudit(
+      this.currentUser?.nombre || 'Usuario',
+      'LOGOUT_USUARIO',
+      `Cierre de sesión de ${this.currentRole}`,
+      'OK'
+    );
+    try {
+      localStorage.removeItem('iot_session_user');
+    } catch {}
+    return this.loginUser({ rol: ROLES.INVITADO });
   }
 
   /**
@@ -945,6 +1056,7 @@ export class AdminController {
     return {
       currentRole: this.currentRole,
       currentBuyerId: this.currentBuyerId,
+      currentUser: { ...this.currentUser },
       adminSupportConsent: this.adminSupportConsent,
       isCurrentBuyerOwner: isOwner,
       permissions: {

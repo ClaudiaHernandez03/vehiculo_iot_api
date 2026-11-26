@@ -7,9 +7,10 @@
 # ==============================================================================
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 import logging
 
-from fastapi import Body, Depends, FastAPI, Header, WebSocket, WebSocketDisconnect
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
@@ -362,6 +363,99 @@ def registrar_auditoria_rbac(payload: dict = Body(...)):
         recurso=str(payload.get("recurso") or "Vehículo #1"),
         resultado=str(payload.get("resultado") or "OK"),
     )
+
+
+# ==============================================================================
+# 6.C AUTENTICACIÓN, SESIONES Y ROLES (ACTIVIDAD 4.3 · LOGIN RBAC MULTIUSUARIO)
+# ==============================================================================
+@app.get("/api/auth/usuarios", tags=["Autenticación 4.3"])
+def listar_usuarios_login():
+    """Devuelve los perfiles de usuarios registrados en Amazon RDS para el login."""
+    try:
+        db.inicializar_esquema_rbac_admin()
+        rbac = db.obtener_estado_rbac_admin()
+        usuarios = rbac.get("usuarios", [])
+    except Exception as e:
+        logger.warning(f"No se pudo consultar usuarios de RDS ({e}), usando catálogo de respaldo.")
+        usuarios = [
+            {"id_cliente": 100, "nombre": "Administrador General (Empresa IoT)", "correo": "admin@cat320-iot.mx", "rol": "ADMIN", "permisos": "CRUD Inventario, Clientes, Asignaciones, Editor DEMO Fábrica, Auditoría Global", "activo": 1},
+            {"id_cliente": 101, "nombre": "Claudia América Hernández (Comprador A)", "correo": "claudia.comprador@empresa-iot.mx", "rol": "USUARIO", "permisos": "Control Total y Monitoreo de Mis Vehículos (#1), Editor DEMO Propia (1-4 pasos)", "activo": 1},
+            {"id_cliente": 102, "nombre": "Constructora Industrial del Centro (Comprador B)", "correo": "operaciones@constructora-centro.mx", "rol": "USUARIO", "permisos": "Control y Editor DEMO solo en sus unidades asignadas (Aislamiento BOLA/IDOR)", "activo": 1},
+            {"id_cliente": 103, "nombre": "Visitante Sala de Exhibición (Prospecto)", "correo": "exhibicion@cat320-iot.mx", "rol": "INVITADO", "permisos": "Catálogo Público y Prueba Temporal Exclusiva 60s", "activo": 1}
+        ]
+    return {
+        "ok": True,
+        "usuarios": usuarios,
+        "roles_permitidos": ["ADMIN", "USUARIO", "INVITADO"]
+    }
+
+
+@app.post("/api/auth/login", tags=["Autenticación 4.3"])
+def autenticar_usuario(payload: dict = Body(...)):
+    """Inicia sesión autenticando al usuario (ADMIN, USUARIO o INVITADO) y registra
+    la evidencia en la bitácora de auditoría de Amazon RDS."""
+    correo = str(payload.get("correo") or "").strip().lower()
+    rol_solicitado = str(payload.get("rol") or "").strip().upper()
+
+    try:
+        db.inicializar_esquema_rbac_admin()
+        rbac = db.obtener_estado_rbac_admin()
+        usuarios = rbac.get("usuarios", [])
+    except Exception as e:
+        logger.warning(f"No se pudo consultar usuarios de RDS ({e}), usando catálogo de respaldo.")
+        usuarios = [
+            {"id_cliente": 100, "nombre": "Administrador General (Empresa IoT)", "correo": "admin@cat320-iot.mx", "rol": "ADMIN", "permisos": "CRUD Inventario, Clientes, Asignaciones, Editor DEMO Fábrica, Auditoría Global", "activo": 1},
+            {"id_cliente": 101, "nombre": "Claudia América Hernández (Comprador A)", "correo": "claudia.comprador@empresa-iot.mx", "rol": "USUARIO", "permisos": "Control Total y Monitoreo de Mis Vehículos (#1), Editor DEMO Propia (1-4 pasos)", "activo": 1},
+            {"id_cliente": 102, "nombre": "Constructora Industrial del Centro (Comprador B)", "correo": "operaciones@constructora-centro.mx", "rol": "USUARIO", "permisos": "Control y Editor DEMO solo en sus unidades asignadas (Aislamiento BOLA/IDOR)", "activo": 1},
+            {"id_cliente": 103, "nombre": "Visitante Sala de Exhibición (Prospecto)", "correo": "exhibicion@cat320-iot.mx", "rol": "INVITADO", "permisos": "Catálogo Público y Prueba Temporal Exclusiva 60s", "activo": 1}
+        ]
+
+    usuario_encontrado = None
+    if correo:
+        for u in usuarios:
+            if str(u.get("correo") or "").strip().lower() == correo:
+                usuario_encontrado = dict(u)
+                break
+
+    if not usuario_encontrado and rol_solicitado:
+        for u in usuarios:
+            if str(u.get("rol") or "").strip().upper() == rol_solicitado:
+                usuario_encontrado = dict(u)
+                break
+
+    if not usuario_encontrado:
+        if rol_solicitado == "INVITADO" or "invitado" in correo or "exhibicion" in correo:
+            usuario_encontrado = {
+                "id_cliente": 103,
+                "nombre": "Visitante Sala de Exhibición (Prospecto)",
+                "correo": "exhibicion@cat320-iot.mx",
+                "rol": "INVITADO",
+                "permisos": "Catálogo Público y Prueba Temporal Exclusiva 60s",
+                "activo": 1
+            }
+        else:
+            raise HTTPException(status_code=401, detail="Usuario o credenciales no válidas en Amazon RDS.")
+
+    # Registro en bitácora de auditoría en Amazon RDS
+    try:
+        db.registrar_auditoria_rbac(
+            actor=usuario_encontrado.get("nombre", "Usuario"),
+            rol=usuario_encontrado.get("rol", "INVITADO"),
+            accion="LOGIN_INICIO_SESION",
+            recurso="Plataforma IoT Control/Monitoreo",
+            resultado="200 OK · Sesión iniciada y rol activado"
+        )
+    except Exception as e:
+        logger.warning(f"No se pudo registrar auditoría en RDS ({e})")
+
+    token = f"iot-token-{usuario_encontrado.get('rol', '').lower()}-{usuario_encontrado.get('id_cliente', 0)}"
+    return {
+        "ok": True,
+        "mensaje": f"Bienvenido/a {usuario_encontrado.get('nombre')}",
+        "usuario": usuario_encontrado,
+        "token_sesion": token,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 
 # ==============================================================================

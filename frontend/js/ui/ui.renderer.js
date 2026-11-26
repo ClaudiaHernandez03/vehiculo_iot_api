@@ -99,13 +99,62 @@ export class UiRenderer {
     this.elBtnStartGuest = document.getElementById('btn-start-guest-session');
     this.elBtnEndGuest = document.getElementById('btn-end-guest-session');
     this.elAdminAuditTbody = document.getElementById('admin-audit-tbody');
+
+    // Elementos de Usuario y Sesión RBAC (Práctica 4.3)
+    this.elHeaderUserBtn = document.getElementById('header-user-btn');
+    this.elHeaderUserName = document.getElementById('header-user-name');
+    this.elHeaderUserIcon = document.getElementById('header-user-icon');
+
+    this.elNoticeUserName = document.getElementById('notice-user-name');
+    this.elNoticeRoleTag = document.getElementById('notice-role-tag');
+    this.elNoticeRoleDesc = document.getElementById('notice-role-desc');
+    this.elNoticeRoleIcon = document.getElementById('notice-role-icon');
+
+    this.elTabControl = document.getElementById('main-tab-control');
+    this.elTabMonitoreo = document.getElementById('main-tab-monitoreo');
+    this.elTabAdministracion = document.getElementById('main-tab-administracion');
+    this.elTabExhibicion = document.getElementById('main-tab-exhibicion');
+    this.elLabelTabAdministracion = document.getElementById('label-tab-administracion');
+    this.elIconTabAdministracion = document.getElementById('icon-tab-administracion');
+
+    this.elAuthLoginModal = document.getElementById('auth-login-modal');
+    this.elLoginAlertBox = document.getElementById('login-alert-box');
+  }
+
+  openLoginModal() {
+    if (this.elAuthLoginModal) {
+      this.elAuthLoginModal.classList.remove('d-none');
+    }
+  }
+
+  closeLoginModal() {
+    if (this.elAuthLoginModal) {
+      this.elAuthLoginModal.classList.add('d-none');
+    }
+    if (this.elLoginAlertBox) {
+      this.elLoginAlertBox.classList.add('d-none');
+      this.elLoginAlertBox.textContent = '';
+    }
+  }
+
+  showLoginAlert(message) {
+    if (this.elLoginAlertBox) {
+      this.elLoginAlertBox.textContent = message;
+      this.elLoginAlertBox.classList.remove('d-none');
+    }
   }
 
   /**
    * Cambia la pestaña/ventana activa (`control`, `monitoreo`, `administracion`) sin recargar la página.
-   * @param {'control'|'monitoreo'|'administracion'} viewName
+   * @param {'control'|'monitoreo'|'administracion'|'exhibicion'} viewName
    */
   switchActiveView(viewName) {
+    if (viewName === 'exhibicion') {
+      this.switchActiveView('administracion');
+      const exhibTabBtn = document.querySelector('[data-admin-subview="exhibicion"]');
+      if (exhibTabBtn) exhibTabBtn.click();
+      return;
+    }
     const views = ['control', 'monitoreo', 'administracion'];
     for (const v of views) {
       const panel = document.getElementById(`view-${v}`);
@@ -559,8 +608,93 @@ export class UiRenderer {
   // ===========================================================================
   // RENDERIZADO DE LA VISTA 4.3: ADMINISTRACIÓN COMERCIAL MULTIUSUARIO
   // ===========================================================================
+  renderUserSession(currentUser, adminSnapshot) {
+    if (!adminSnapshot) return;
+    const role = adminSnapshot.currentRole || ROLES.ADMIN;
+    const user = currentUser || {
+      nombre: role === ROLES.ADMIN ? 'Administrador General' : (adminSnapshot.currentBuyerId === 101 ? 'Claudia América Hernández' : 'Constructora Industrial del Centro'),
+      correo: role === ROLES.ADMIN ? 'admin@cat320-iot.mx' : (adminSnapshot.currentBuyerId === 101 ? 'claudia.comprador@empresa-iot.mx' : 'operaciones@constructora-centro.mx'),
+      rol: role
+    };
+
+    const nameClean = (user.nombre || 'Usuario').split(' (')[0];
+    const buyerId = Number(adminSnapshot.currentBuyerId) || 101;
+
+    // 1. Cabecera superior
+    if (this.elHeaderUserName) {
+      this.elHeaderUserName.textContent = nameClean;
+    }
+    if (this.elHeaderRoleBadge) {
+      this.elHeaderRoleBadge.textContent = role;
+      this.elHeaderRoleBadge.className = 'badge-chip ms-1 ' + (
+        role === ROLES.ADMIN ? 'badge-chip-purple' :
+        role === ROLES.USUARIO ? 'bg-info text-dark' : 'bg-warning text-dark'
+      );
+    }
+    if (this.elHeaderUserIcon) {
+      this.elHeaderUserIcon.className = role === ROLES.ADMIN ? 'bi bi-shield-lock-fill text-purple-bright' :
+        role === ROLES.USUARIO ? 'bi bi-person-check-fill text-info' : 'bi bi-eye-fill text-warning';
+    }
+
+    // 2. Banner de Rol y Permisos de la sesión
+    if (this.elNoticeUserName) {
+      this.elNoticeUserName.textContent = user.nombre || nameClean;
+    }
+    if (this.elNoticeRoleTag) {
+      this.elNoticeRoleTag.textContent = role;
+      this.elNoticeRoleTag.className = 'badge px-2 py-0 ms-1 fw-bold ' + (
+        role === ROLES.ADMIN ? 'bg-purple-neon text-dark' :
+        role === ROLES.USUARIO ? 'bg-info text-dark' : 'bg-warning text-dark'
+      );
+    }
+    if (this.elNoticeRoleDesc) {
+      if (role === ROLES.ADMIN) {
+        this.elNoticeRoleDesc.textContent = 'Acceso maestro: Inventario de Unidades, Modelos, Asignaciones, Demos de Fábrica y Auditoría RDS.';
+      } else if (role === ROLES.USUARIO) {
+        if (buyerId === 101) {
+          this.elNoticeRoleDesc.textContent = 'Propietaria de Excavadora #1: Control total con Joysticks, Monitoreo en vivo y Editor de DEMOs propias.';
+        } else {
+          this.elNoticeRoleDesc.textContent = 'Aislamiento BOLA/IDOR activo: No asignado a Excavadora #1 (Cualquier comando a #1 arroja 403 Prohibido).';
+        }
+      } else {
+        this.elNoticeRoleDesc.textContent = 'Modo Visitante: Prueba temporal de 60s (Orugas y Luz) y Catálogo público. Sin acceso a Administración corporativa.';
+      }
+    }
+
+    // 3. Adaptación Dinámica de las PESTAÑAS PRINCIPALES según el rol:
+    if (role === ROLES.ADMIN) {
+      // ADMIN: ve Control, Monitoreo y Administración
+      if (this.elTabControl) this.elTabControl.classList.remove('d-none');
+      if (this.elTabMonitoreo) this.elTabMonitoreo.classList.remove('d-none');
+      if (this.elTabAdministracion) {
+        this.elTabAdministracion.classList.remove('d-none');
+        if (this.elLabelTabAdministracion) this.elLabelTabAdministracion.textContent = 'Administración';
+        if (this.elIconTabAdministracion) this.elIconTabAdministracion.className = 'bi bi-gear-fill me-1';
+      }
+      if (this.elTabExhibicion) this.elTabExhibicion.classList.add('d-none');
+    } else if (role === ROLES.USUARIO) {
+      // USUARIO: ve Control, Monitoreo y Mis Demos (oculta Admin corporativo)
+      if (this.elTabControl) this.elTabControl.classList.remove('d-none');
+      if (this.elTabMonitoreo) this.elTabMonitoreo.classList.remove('d-none');
+      if (this.elTabAdministracion) {
+        this.elTabAdministracion.classList.remove('d-none');
+        if (this.elLabelTabAdministracion) this.elLabelTabAdministracion.textContent = 'Mis Demos';
+        if (this.elIconTabAdministracion) this.elIconTabAdministracion.className = 'bi bi-list-check me-1';
+      }
+      if (this.elTabExhibicion) this.elTabExhibicion.classList.add('d-none');
+    } else if (role === ROLES.INVITADO) {
+      // INVITADO: ve Exhibición 60s y Monitoreo (oculta Administración corporativa y Control permanente)
+      if (this.elTabControl) this.elTabControl.classList.add('d-none');
+      if (this.elTabMonitoreo) this.elTabMonitoreo.classList.remove('d-none');
+      if (this.elTabAdministracion) this.elTabAdministracion.classList.add('d-none');
+      if (this.elTabExhibicion) this.elTabExhibicion.classList.remove('d-none');
+    }
+  }
+
   renderAdminView(adminSnapshot) {
     if (!adminSnapshot) return;
+
+    this.renderUserSession(adminSnapshot.currentUser, adminSnapshot);
 
     const role = adminSnapshot.currentRole;
 

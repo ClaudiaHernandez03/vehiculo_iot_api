@@ -38,12 +38,30 @@
         <!-- Título limpio sin logotipo CAT -->
         <div class="cat-title-block py-1">
           <h1 class="cat-main-title mb-0">Plataforma de Control Remoto</h1>
-          <div class="d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
             <span class="cat-subtitle" id="vehicle-name">Vehículos y Equipos</span>
             <span class="badge-chip d-none d-sm-inline-flex" id="vehicle-mcu">ESP8266 · #1</span>
-            <span class="badge-chip badge-chip-purple d-none d-md-inline-flex" id="header-active-role-badge">
-              Rol: Administrador
-            </span>
+            <!-- Cápsula Interactiva de Usuario / Sesión Activa -->
+            <button
+              type="button"
+              id="header-user-btn"
+              class="user-session-pill btn btn-sm py-0 px-2"
+              title="Clic para cambiar de perfil o iniciar sesión"
+              aria-label="Perfil de usuario activo. Clic para cambiar"
+            >
+              <i class="bi bi-person-circle text-purple-bright" id="header-user-icon" aria-hidden="true"></i>
+              <span id="header-user-name">Administrador (Empresa)</span>
+              <span class="badge-chip badge-chip-purple ms-1" id="header-active-role-badge">ADMIN</span>
+            </button>
+            <button
+              type="button"
+              id="btn-quick-login-toggle"
+              class="btn btn-sm btn-outline-purple py-0 px-2 d-none d-md-inline-flex"
+              style="font-size:0.72rem;height:24px;"
+              title="Iniciar sesión o cambiar perfil"
+            >
+              <i class="bi bi-box-arrow-in-right me-1"></i>Login
+            </button>
           </div>
         </div>
 
@@ -125,27 +143,31 @@
   </header>
 
   <!-- ===================================================================== -->
-  <!-- BARRA DE 3 VENTANAS INDEPENDIENTES (CONTROL · MONITOREO · ADMINISTRACIÓN) -->
+  <!-- BARRA DE VENTANAS ADAPTATIVAS SEGÚN ROL (CONTROL · MONITOREO · ADMINISTRACIÓN) -->
   <!-- ===================================================================== -->
-  <nav class="cat-tabs-bar py-2" aria-label="Navegación principal de las 3 ventanas" role="tablist">
+  <nav class="cat-tabs-bar py-2" aria-label="Navegación principal de las ventanas" role="tablist">
     <div class="container-fluid px-3 px-lg-4">
-      <div class="cat-tabs-grid-3">
+      <div class="cat-tabs-grid-3" id="main-tabs-grid">
+        <!-- Pestaña 1: Control (Visible para ADMIN y USUARIO) -->
         <button
           type="button"
           class="cat-tab-pill active"
           data-nav-view="control"
+          id="main-tab-control"
           role="tab"
           aria-selected="true"
           aria-controls="view-control"
         >
           <i class="bi bi-controller" aria-hidden="true"></i>
-          <span>Control</span>
+          <span id="label-tab-control">Control</span>
         </button>
 
+        <!-- Pestaña 2: Monitoreo (Visible para TODOS: Admin, Usuario, Invitado) -->
         <button
           type="button"
           class="cat-tab-pill"
           data-nav-view="monitoreo"
+          id="main-tab-monitoreo"
           role="tab"
           aria-selected="false"
           aria-controls="view-monitoreo"
@@ -154,23 +176,56 @@
           <span>Monitoreo</span>
         </button>
 
+        <!-- Pestaña 3: Administración (ADMIN) / Mis Demos (USUARIO) -->
         <button
           type="button"
           class="cat-tab-pill"
           data-nav-view="administracion"
+          id="main-tab-administracion"
           role="tab"
           aria-selected="false"
           aria-controls="view-administracion"
         >
-          <i class="bi bi-gear-fill" aria-hidden="true"></i>
-          <span>Administración</span>
+          <i class="bi bi-gear-fill" id="icon-tab-administracion" aria-hidden="true"></i>
+          <span id="label-tab-administracion">Administración</span>
+        </button>
+
+        <!-- Pestaña 4: Exhibición 60s (Visible para INVITADO) -->
+        <button
+          type="button"
+          class="cat-tab-pill d-none"
+          data-nav-view="exhibicion"
+          id="main-tab-exhibicion"
+          role="tab"
+          aria-selected="false"
+          aria-controls="view-administracion"
+        >
+          <i class="bi bi-hourglass-split text-warning" aria-hidden="true"></i>
+          <span>Exhibición 60s</span>
         </button>
       </div>
     </div>
   </nav>
 
-  <!-- CONTENEDOR DE LAS 3 VENTANAS INDEPENDIENTES (SOLO SE MUESTRA LA VENTANA ACTIVA) -->
+  <!-- CONTENEDOR DE LAS VENTANAS (SOLO SE MUESTRA LA VENTANA ACTIVA) -->
   <main class="container-fluid px-3 px-lg-4 my-1 flex-grow-1 d-flex flex-column justify-content-between">
+    <!-- BANNER DE ROL ACTIVO Y PERMISOS DE LA SESIÓN (RBAC 4.3) -->
+    <div id="user-role-notice-bar" class="user-role-notice-bar">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <i class="bi bi-shield-check text-purple-bright fs-6" id="notice-role-icon" aria-hidden="true"></i>
+        <span>
+          <strong id="notice-user-name">Administrador General</strong>
+          <span class="text-secondary">· Rol:</span>
+          <span class="badge bg-purple-neon text-dark fw-bold px-2 py-0 ms-1" id="notice-role-tag">ADMIN</span>
+          <span class="text-purple-light ms-2 d-none d-sm-inline" id="notice-role-desc">Acceso maestro a Inventario, Clientes, Asignaciones, Demos y Control</span>
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <button type="button" class="btn btn-sm btn-outline-light py-0 px-2" id="btn-notice-switch-user" style="font-size:0.72rem;height:22px;">
+          <i class="bi bi-person-gear me-1"></i>Cambiar Perfil
+        </button>
+      </div>
+    </div>
     <!-- ===================================================================== -->
     <!-- VENTANA 1 (INDEPENDIENTE): CONTROL (4.1 — DOBLE JOYSTICK + DETENER + FUNCIONES) -->
     <!-- ===================================================================== -->
@@ -1048,6 +1103,122 @@
   <footer class="standalone-credits-footer">
     Desarrollado por Claudia America Hernandez Jimenez · 2026
   </footer>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL DE INICIO DE SESIÓN / SELECCIÓN DE PERFIL MULTIUSUARIO (RBAC 4.3) -->
+  <!-- ===================================================================== -->
+  <div id="auth-login-modal" class="auth-modal-backdrop d-none" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+    <div class="auth-modal-card">
+      <div class="d-flex align-items-center justify-content-between mb-3 border-bottom border-purple-dark pb-2">
+        <div class="d-flex align-items-center gap-2">
+          <div class="login-brand-icon">
+            <i class="bi bi-shield-lock-fill text-purple-bright fs-4"></i>
+          </div>
+          <div>
+            <h2 id="login-modal-title" class="h5 mb-0 text-white fw-bold">Autenticación de Usuarios IoT</h2>
+            <div class="small text-secondary">Control de Acceso basado en Roles (RBAC) · AWS RDS</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" id="btn-close-login-modal" aria-label="Cerrar ventana de acceso"></button>
+      </div>
+
+      <p class="small text-light mb-3">
+        Selecciona un perfil para comprobar en tiempo real la <strong>diferencia de pestañas, permisos y aislamiento BOLA/IDOR</strong> solicitados en la práctica:
+      </p>
+
+      <!-- TARJETAS DE SELECCIÓN RÁPIDA DE PERFILES -->
+      <div class="row g-2 mb-3" id="login-profile-cards">
+        <!-- 1. ADMINISTRADOR GENERAL -->
+        <div class="col-12">
+          <button type="button" class="profile-card-option active w-100 text-start" data-login-profile="admin" data-email="admin@cat320-iot.mx" data-role="ADMIN" data-buyer-id="100">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="badge bg-purple-neon text-dark fw-bold"><i class="bi bi-building-fill-gear me-1"></i>ADMINISTRADOR</span>
+              <span class="small text-purple-bright font-monospace">admin@cat320-iot.mx</span>
+            </div>
+            <div class="fw-bold text-white mb-1">Empresa Comercializadora IoT</div>
+            <div class="small text-secondary">
+              <i class="bi bi-check2-circle text-purple-bright me-1"></i><strong>Pestañas visibles:</strong> Control, Monitoreo y Administración.
+              <br/>
+              <i class="bi bi-check2-circle text-purple-bright me-1"></i><strong>Permisos:</strong> Inventario global, CRUD unidades/modelos, asignaciones, editor DEMO de fábrica y auditoría RDS.
+            </div>
+          </button>
+        </div>
+
+        <!-- 2. USUARIO COMPRADOR A (PROPIETARIO EXCAVADORA #1) -->
+        <div class="col-12">
+          <button type="button" class="profile-card-option w-100 text-start" data-login-profile="comprador_a" data-email="claudia.comprador@empresa-iot.mx" data-role="USUARIO" data-buyer-id="101">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="badge bg-info text-dark fw-bold"><i class="bi bi-person-check-fill me-1"></i>USUARIO COMPRADOR A</span>
+              <span class="small text-info font-monospace">claudia.comprador@empresa-iot.mx</span>
+            </div>
+            <div class="fw-bold text-white mb-1">Claudia América Hernández · Unidad #1 Asignada</div>
+            <div class="small text-secondary">
+              <i class="bi bi-check2-circle text-info me-1"></i><strong>Pestañas visibles:</strong> Control, Monitoreo y Mis Vehículos / Demos.
+              <br/>
+              <i class="bi bi-check2-circle text-info me-1"></i><strong>Permisos:</strong> Control total de Excavadora #1 con Joysticks, botones, DEMO y diseño de rutinas privadas.
+            </div>
+          </button>
+        </div>
+
+        <!-- 3. USUARIO COMPRADOR B (AISLAMIENTO BOLA/IDOR) -->
+        <div class="col-12">
+          <button type="button" class="profile-card-option w-100 text-start" data-login-profile="comprador_b" data-email="operaciones@constructora-centro.mx" data-role="USUARIO" data-buyer-id="102">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-shield-slash-fill me-1"></i>USUARIO COMPRADOR B</span>
+              <span class="small text-warning font-monospace">operaciones@constructora-centro.mx</span>
+            </div>
+            <div class="fw-bold text-white mb-1">Constructora Industrial del Centro · Sin Excavadora #1</div>
+            <div class="small text-secondary">
+              <i class="bi bi-check2-circle text-warning me-1"></i><strong>Pestañas visibles:</strong> Control (Bloqueado 403), Monitoreo y Mis Vehículos.
+              <br/>
+              <i class="bi bi-exclamation-triangle text-warning me-1"></i><strong>Aislamiento BOLA/IDOR:</strong> Al maniobrar la Excavadora #1 el sistema rechaza la orden con <strong class="text-danger">403 Prohibido</strong>.
+            </div>
+          </button>
+        </div>
+
+        <!-- 4. INVITADO / SALA DE EXHIBICIÓN -->
+        <div class="col-12">
+          <button type="button" class="profile-card-option w-100 text-start" data-login-profile="invitado" data-email="exhibicion@cat320-iot.mx" data-role="INVITADO" data-buyer-id="103">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="badge bg-secondary text-white fw-bold"><i class="bi bi-eye-fill me-1"></i>INVITADO / VISITANTE</span>
+              <span class="small text-light font-monospace">exhibicion@cat320-iot.mx</span>
+            </div>
+            <div class="fw-bold text-white mb-1">Visitante Sala de Exhibición (Prospecto)</div>
+            <div class="small text-secondary">
+              <i class="bi bi-check2-circle text-light me-1"></i><strong>Pestañas visibles:</strong> Exhibición 60s, Monitoreo y Catálogo.
+              <br/>
+              <i class="bi bi-shield-lock text-light me-1"></i><strong>Acceso Restringido:</strong> Prueba temporal de 60 segundos exclusiva con auto-detener. Sin acceso a Administración corporativa.
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- FORMULARIO MANUAL OPCIONAL O ACCESO DIRECTO -->
+      <form id="auth-login-form" class="mt-2 pt-2 border-top border-purple-dark">
+        <div class="row g-2 mb-2">
+          <div class="col-12 col-sm-7">
+            <label for="login-email-input" class="form-label small text-secondary mb-1">Correo Electrónico Registrado:</label>
+            <input type="email" id="login-email-input" class="form-control form-control-sm dark-purple-input" value="admin@cat320-iot.mx" required />
+          </div>
+          <div class="col-12 col-sm-5">
+            <label for="login-password-input" class="form-label small text-secondary mb-1">Contraseña / PIN:</label>
+            <input type="password" id="login-password-input" class="form-control form-control-sm dark-purple-input" placeholder="••••••••" value="demo123" />
+          </div>
+        </div>
+
+        <div id="login-alert-box" class="alert alert-danger py-1 px-2 small d-none mb-2" role="alert"></div>
+
+        <div class="d-flex align-items-center justify-content-between gap-2 mt-3">
+          <button type="button" id="btn-login-as-guest-fast" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-eye me-1"></i>Entrar como Invitado
+          </button>
+          <button type="submit" id="btn-submit-login" class="btn btn-sm btn-purple-primary fw-bold px-3">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Punto de entrada modular ES6 -->
   <script type="module" src="./js/main.js?v=20261119"></script>

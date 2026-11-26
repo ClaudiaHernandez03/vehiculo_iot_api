@@ -1396,3 +1396,97 @@ body {
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   ESTILOS DE AUTENTICACIÓN, MODAL DE LOGIN Y ROLES RBAC 4.3
+   ========================================================================== */
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(5, 4, 10, 0.88);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.auth-modal-card {
+  background: linear-gradient(150deg, #161226 0%, #0d0a17 100%);
+  border: 1px solid #7c3aed;
+  border-radius: 0.9rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(124, 58, 237, 0.25);
+  max-width: 620px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+  color: #e2e8f0;
+}
+
+.profile-card-option {
+  background: #141022;
+  border: 1px solid #2d2448;
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.85rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: #e2e8f0;
+}
+
+.profile-card-option:hover {
+  border-color: #a855f7;
+  background: #1c1630;
+}
+
+.profile-card-option.active {
+  border-color: #a855f7;
+  background: #231a40;
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.35);
+}
+
+.bg-purple-neon {
+  background-color: #a855f7 !important;
+  color: #07080d !important;
+}
+
+.border-purple-dark {
+  border-color: #2d2448 !important;
+}
+
+.user-session-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #f1f5f9;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.user-session-pill:hover {
+  background: rgba(168, 85, 247, 0.26);
+  border-color: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+}
+
+.user-role-notice-bar {
+  background: linear-gradient(90deg, rgba(168, 85, 247, 0.15) 0%, rgba(20, 16, 34, 0.9) 100%);
+  border: 1px solid #3b2866;
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+

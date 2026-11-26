@@ -326,6 +326,20 @@ export class IotApiService {
       resultado
     });
   }
+
+  /**
+   * 26. Obtiene los usuarios y perfiles registrados para inicio de sesión
+   */
+  async getAuthUsers() {
+    return this.client.get('/api/auth/usuarios');
+  }
+
+  /**
+   * 27. Inicia sesión en la plataforma y valida permisos en Amazon RDS
+   */
+  async login({ correo, rol, password = null }) {
+    return this.client.post('/api/auth/login', { correo, rol, password });
+  }
 }
 
 export const iotApiService = new IotApiService();

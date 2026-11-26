@@ -59,7 +59,15 @@ class ExcavatorControlApp {
     // 4. Controlador de Administración Comercial Multiusuario (Práctica 4.3)
     this.adminController = new AdminController({
       apiService: iotApiService,
-      onStateChange: (adminSnapshot) => this.ui.renderAdminView(adminSnapshot),
+      onStateChange: (adminSnapshot) => {
+        this.ui.renderAdminView(adminSnapshot);
+        if (adminSnapshot.currentRole === 'INVITADO') {
+          if (this.activeView === 'control' || this.activeView === 'administracion') {
+            this.activeView = 'monitoreo';
+            this.ui.switchActiveView('monitoreo');
+          }
+        }
+      },
       onFeedback: (feedback) => this.ui.renderOperationFeedback(feedback),
       onRdsEvidence: (rawPayload) => this.connectivityMonitor.recordRdsEvidenceFromPayload(rawPayload),
       onDemosChanged: async () => {
@@ -212,6 +220,10 @@ class ExcavatorControlApp {
         this.monitoringController.loadInitialMonitoring({ silent: true }),
         this.adminController.loadAdminData()
       ]);
+
+      if (!localStorage.getItem('iot_session_user')) {
+        this.ui.openLoginModal();
+      }
 
       this.ui.renderOperationFeedback({
         type: 'success',
@@ -425,6 +437,75 @@ class ExcavatorControlApp {
         this.adminController.setAdminSupportConsent(e.target.checked);
       });
     }
+
+    // 7. Eventos de Autenticación, Login y Selección de Perfiles RBAC (Práctica 4.3)
+    const openLogin = () => this.ui.openLoginModal();
+    const closeLogin = () => this.ui.closeLoginModal();
+
+    document.getElementById('header-user-btn')?.addEventListener('click', openLogin);
+    document.getElementById('btn-quick-login-toggle')?.addEventListener('click', openLogin);
+    document.getElementById('btn-notice-switch-user')?.addEventListener('click', openLogin);
+    document.getElementById('btn-close-login-modal')?.addEventListener('click', closeLogin);
+
+    // Clic en tarjetas de selección rápida de perfil
+    document.querySelectorAll('[data-login-profile]').forEach((card) => {
+      card.addEventListener('click', async (e) => {
+        e.preventDefault();
+        document.querySelectorAll('[data-login-profile]').forEach((c) => c.classList.remove('active'));
+        card.classList.add('active');
+
+        const email = card.getAttribute('data-email');
+        const role = card.getAttribute('data-role');
+        const buyerId = card.getAttribute('data-buyer-id');
+
+        const emailInput = document.getElementById('login-email-input');
+        if (emailInput && email) emailInput.value = email;
+
+        await this.adminController.loginUser({
+          correo: email,
+          rol: role,
+          id_cliente: buyerId
+        });
+
+        if (role === 'INVITADO') {
+          this.activeView = 'monitoreo';
+          this.ui.switchActiveView('monitoreo');
+        } else if (this.activeView === 'exhibicion') {
+          this.activeView = 'control';
+          this.ui.switchActiveView('control');
+        }
+
+        this.ui.closeLoginModal();
+      });
+    });
+
+    // Formulario de inicio de sesión manual
+    const loginForm = document.getElementById('auth-login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email-input')?.value?.trim();
+        const password = document.getElementById('login-password-input')?.value;
+        try {
+          const user = await this.adminController.loginUser({ correo: email, password });
+          if (user?.rol === 'INVITADO') {
+            this.activeView = 'monitoreo';
+            this.ui.switchActiveView('monitoreo');
+          }
+          this.ui.closeLoginModal();
+        } catch (err) {
+          this.ui.showLoginAlert(err?.message || 'Error al iniciar sesión.');
+        }
+      });
+    }
+
+    // Botón de acceso rápido como Invitado
+    document.getElementById('btn-login-as-guest-fast')?.addEventListener('click', async () => {
+      await this.adminController.loginUser({ rol: 'INVITADO' });
+      this.activeView = 'monitoreo';
+      this.ui.switchActiveView('monitoreo');
+      this.ui.closeLoginModal();
+    });
 
     // Formulario Alta de Unidad Física en RDS
     const formNewUnit = document.getElementById('form-admin-new-unit');
